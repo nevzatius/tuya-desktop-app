@@ -44,6 +44,7 @@ STRINGS: dict[str, str] = {
     "cloud.sign_invalid": "Access ID or Secret is wrong (or belongs to a different region). Copy the values from iot.tuya.com again.",
     "cloud.permission": "The project is not authorized for this action. Make sure the “Smart Home” API services are added to the Cloud project.",
     "cloud.token": "Could not get a session from Tuya Cloud. Check the credentials and your internet connection.",
+    "cloud.network": "Could not reach Tuya Cloud. Check your internet connection and try again.",
     "cloud.failed": "Tuya Cloud connection failed: {error}",
     "cloud.unknown_error": "unknown error",
     "cloud.list_failed": "Could not fetch the device list: {error}",
@@ -145,48 +146,92 @@ STRINGS: dict[str, str] = {
     "fmt.minutes": "{minutes} min",
     # -- add-light wizard ----------------------------------------------------------------
     "setup.title": "Add light",
-    "setup.intro": (
-        "To control a Tuya / Smart Life light over Bluetooth you need a light-specific "
-        "<b>local key</b>. Only the Tuya account the light is linked to can provide it; "
-        "once you have it, the app works without internet."
-    ),
-    "setup.cloud_button": "Get it from my Tuya account (recommended)",
-    "setup.manual_button": "I'll enter the key manually (advanced)",
+    "setup.step_of": "Step {current} / {total}",
+    "setup.back": "Back",
     "setup.cancel": "Cancel",
-    "setup.cloud_title": "Add with Tuya Cloud",
-    "setup.how": "How do I get these?  ▾",
-    "setup.cloud_help": (
-        "<b>One-time setup (about 10 minutes)</b><br>"
-        "1. Create a free account at <a href='https://iot.tuya.com'>iot.tuya.com</a>.<br>"
-        "2. Cloud → Development → <i>Create Cloud Project</i>. Industry: <i>Smart Home</i>, "
-        "Development Method: <i>Smart Home</i>, Data Center: your region.<br>"
-        "3. Paste the <i>Access ID</i> and <i>Access Secret</i> from the project's <i>Overview</i> page below.<br>"
-        "4. In the project open <i>Devices → Link App Account → Add App Account</i> and scan the QR code "
-        "with the Smart Life app on your phone (Me → scan icon at the top right). Your lights are linked to the project.<br>"
-        "Your details are stored only on this computer; the Access Secret is never saved."
+    "setup.open_tuya": "Open iot.tuya.com",
+    # step 1: welcome
+    "setup.welcome_title": "Let's connect your light",
+    "setup.welcome_body": (
+        "To control your light you need a <b>one-time key</b>. Only your own Tuya account can provide it. "
+        "It takes about 10 minutes and you only do it once; afterwards everything works over Bluetooth, "
+        "without internet."
     ),
+    "setup.welcome_checklist": (
+        "<b>Have these ready:</b><br>"
+        "• The Smart Life app on your phone, with your light already added<br>"
+        "• The light plugged in, switched on and close to you<br>"
+        "• Bluetooth on your computer"
+    ),
+    "setup.start": "Get started",
+    # step 2: Tuya account
+    "setup.account_title": "Prepare your Tuya account",
+    "setup.account_intro": "Do these steps on the Tuya website. You can keep this window open.",
+    "setup.account_step1": "<b>1. Create a free account</b> (or log in). It is a developer account, separate from your Smart Life login.",
+    "setup.account_step2": (
+        "<b>2. Create a project.</b> Cloud → Development → <i>Create Cloud Project</i>. "
+        "Industry: <i>Smart Home</i>, Development Method: <i>Smart Home</i>, Data Center: your region."
+    ),
+    "setup.account_step3": (
+        "<b>3. Link your Smart Life account.</b> In the project choose <i>Devices → Link App Account → Add App Account</i> "
+        "and scan the QR code with the Smart Life app on your phone (Me → scan icon at the top right)."
+    ),
+    "setup.account_step4": "<b>4. Copy the keys.</b> You will copy the <i>Access ID</i> and <i>Access Secret</i> from the project's <i>Overview</i> page.",
+    "setup.account_trouble": (
+        "If you get a “permission” error later, open the project's <i>Service API</i> tab and make sure the "
+        "Smart Home related services (e.g. <i>IoT Core</i>) are added."
+    ),
+    "setup.account_next": "I have my Access ID and Secret",
+    # step 3: credentials
+    "setup.cred_title": "Enter your keys",
+    "setup.cred_intro": "Copy the values from the Overview page. Tip: just copy them, the app picks them up from the clipboard.",
     "setup.chars_20": "20 characters",
     "setup.chars_32": "32 characters",
     "setup.show": "Show",
-    "setup.region": "Region",
-    "setup.back": "Back",
-    "setup.find": "Find lights",
+    "setup.field_status": "{got} / {length}",
+    "setup.field_ok": "✓ {got} / {length}",
+    "setup.pasted_id": "Access ID pasted from the clipboard.",
+    "setup.pasted_secret": "Access Secret pasted from the clipboard.",
+    "setup.advanced": "Advanced  ▾",
+    "setup.region": "Data center",
+    "setup.region_auto": "Automatic (recommended)",
+    "setup.region_hint": "With Automatic your region is guessed first; if that fails the others are tried in turn.",
+    "setup.manual_button": "I'll enter the key manually",
+    "setup.find": "Find my lights",
     "setup.connecting": "Connecting to Tuya Cloud…",
-    "setup.results_title": "Devices found",
-    "setup.results_hint": "Tick the ones you want to add.",
-    "setup.add_selected": "Add selected",
-    "setup.not_light": "(not a light)",
-    "setup.already_added": "(already added, key will be updated)",
-    "setup.experimental": "(experimental)",
+    "setup.retry": "Try again",
+    # step 4: choose lights
+    "setup.lights_title": "Choose and name your lights",
+    "setup.lights_hint": "Tick the lights you want to add and give each one a name you will recognize.",
+    "setup.name_placeholder": "Light name",
+    "setup.scan": "Scan for lights near me",
+    "setup.scanning": "Scanning for nearby Bluetooth lights…",
+    "setup.scan_found": "Found {count} Tuya Bluetooth device(s) nearby.",
+    "setup.scan_none": "No Tuya Bluetooth devices found nearby. Is the light on, is Bluetooth on, and is the Smart Life app on your phone disconnected from the light?",
+    "setup.scan_failed": "Scan failed: {error}",
+    "setup.nearby": "nearby · {signal} signal",
+    "setup.signal_strong": "strong",
+    "setup.signal_good": "good",
+    "setup.signal_weak": "weak",
+    "setup.not_seen": "not seen nearby",
+    "setup.add_selected": "Add selected lights",
+    "setup.not_light": "not a light",
+    "setup.already_added": "already added, key will be updated",
+    "setup.experimental": "experimental",
     "setup.experimental_note": "“Experimental” devices may not use the standard light commands; if one does not work, check the log.",
     "setup.pick_one": "Tick at least one device first.",
+    # manual entry (advanced)
     "setup.manual_title": "Enter the key manually",
     "setup.manual_intro": "Use this if you already got these details from Tuya Cloud or another tool.",
-    "setup.name_placeholder": "e.g. Living room",
+    "setup.manual_name_placeholder": "e.g. Living room",
     "setup.field_name": "Name",
     "setup.field_device_id": "Device ID",
     "setup.field_local_key": "Local key",
     "setup.field_uuid": "UUID",
     "setup.add": "Add",
     "setup.manual_required": "Device ID and local key are required.",
+    # done
+    "setup.done_title": "You're all set",
+    "setup.done_body": "{names} added. The app will now connect to the light over Bluetooth. You won't need these steps again.",
+    "setup.done_button": "Open the app",
 }

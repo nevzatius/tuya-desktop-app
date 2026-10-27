@@ -43,6 +43,7 @@ STRINGS: dict[str, str] = {
     "cloud.sign_invalid": "Access ID veya Secret yanlış (ya da bu bölgeye ait değil). Değerleri iot.tuya.com'dan yeniden kopyalayın.",
     "cloud.permission": "Proje bu işlem için yetkili değil. Cloud projesinde 'Smart Home' API paketlerinin ekli olduğundan emin olun.",
     "cloud.token": "Tuya Cloud'dan oturum alınamadı. Bilgileri ve internet bağlantısını kontrol edin.",
+    "cloud.network": "Tuya Cloud'a ulaşılamadı. İnternet bağlantınızı kontrol edip tekrar deneyin.",
     "cloud.failed": "Tuya Cloud bağlantısı başarısız: {error}",
     "cloud.unknown_error": "bilinmeyen hata",
     "cloud.list_failed": "Cihaz listesi alınamadı: {error}",
@@ -144,48 +145,93 @@ STRINGS: dict[str, str] = {
     "fmt.minutes": "{minutes} dk",
     # -- ekleme sihirbazı ----------------------------------------------------------------
     "setup.title": "Işık ekle",
-    "setup.intro": (
-        "Bir Tuya / Smart Life ışığını Bluetooth ile kontrol etmek için ışığa özel bir "
-        "<b>yerel anahtar</b> gerekir. Bu anahtarı yalnızca ışığın bağlı olduğu Tuya hesabı verebilir; "
-        "bir kez alındıktan sonra uygulama internetsiz çalışır."
-    ),
-    "setup.cloud_button": "Tuya hesabımdan otomatik al (önerilen)",
-    "setup.manual_button": "Anahtarı elle gireceğim (ileri düzey)",
+    "setup.step_of": "Adım {current} / {total}",
+    "setup.back": "Geri",
     "setup.cancel": "Vazgeç",
-    "setup.cloud_title": "Tuya Cloud ile ekle",
-    "setup.how": "Nasıl alırım?  ▾",
-    "setup.cloud_help": (
-        "<b>Bir kerelik hazırlık (yaklaşık 10 dakika)</b><br>"
-        "1. <a href='https://iot.tuya.com'>iot.tuya.com</a> adresinde ücretsiz hesap açın.<br>"
-        "2. Cloud → Development → <i>Create Cloud Project</i>. Industry: <i>Smart Home</i>, "
-        "Development Method: <i>Smart Home</i>, Data Center: bulunduğunuz bölge (Türkiye için Central/Western Europe).<br>"
-        "3. Projenin <i>Overview</i> sayfasındaki <i>Access ID</i> ve <i>Access Secret</i> değerlerini aşağıya yapıştırın.<br>"
-        "4. Projede <i>Devices → Link App Account → Add App Account</i> deyip çıkan QR kodu telefonunuzdaki "
-        "Smart Life uygulamasıyla okutun (Ben → sağ üstteki tarama simgesi). Işıklarınız projeye bağlanır.<br>"
-        "Bilgileriniz yalnızca bu bilgisayarda saklanır; Access Secret ise hiç kaydedilmez."
+    "setup.open_tuya": "iot.tuya.com'u aç",
+    # 1. adım: hoş geldin
+    "setup.welcome_title": "Işığını bağlayalım",
+    "setup.welcome_body": (
+        "Işığı kontrol edebilmek için <b>bir kerelik bir anahtar</b> gerekir. Bu anahtarı yalnızca kendi Tuya "
+        "hesabın verebilir. Yaklaşık 10 dakika sürer ve yalnızca bir kez yapılır; sonrasında her şey internetsiz, "
+        "Bluetooth ile çalışır."
     ),
+    "setup.welcome_checklist": (
+        "<b>Başlamadan önce hazır olsun:</b><br>"
+        "• Telefonunda Smart Life uygulaması ve ışığın orada kayıtlı olması<br>"
+        "• Işığın yanında, prize takılı ve açık olması<br>"
+        "• Bilgisayarında Bluetooth"
+    ),
+    "setup.start": "Başlayalım",
+    # 2. adım: Tuya hesabı
+    "setup.account_title": "Tuya hesabını hazırla",
+    "setup.account_intro": "Aşağıdaki adımları Tuya'nın sitesinde yap. Bu pencereyi açık bırakabilirsin.",
+    "setup.account_step1": "<b>1. Ücretsiz hesap aç</b> (ya da giriş yap). Smart Life hesabından ayrı, geliştirici hesabıdır.",
+    "setup.account_step2": (
+        "<b>2. Proje oluştur.</b> Cloud → Development → <i>Create Cloud Project</i>. "
+        "Industry: <i>Smart Home</i>, Development Method: <i>Smart Home</i>, Data Center: bulunduğun bölge "
+        "(Türkiye için Central Europe ya da Western Europe)."
+    ),
+    "setup.account_step3": (
+        "<b>3. Smart Life hesabını bağla.</b> Projede <i>Devices → Link App Account → Add App Account</i> de, "
+        "çıkan QR kodu telefondaki Smart Life ile okut (Ben → sağ üstteki tarama simgesi)."
+    ),
+    "setup.account_step4": "<b>4. Anahtarları kopyala.</b> Projenin <i>Overview</i> sayfasındaki <i>Access ID</i> ve <i>Access Secret</i> değerlerini kopyalayacaksın.",
+    "setup.account_trouble": (
+        "Sonra “yetki” hatası alırsan projenin <i>Service API</i> sekmesinde Smart Home ile ilgili hizmetlerin "
+        "(ör. <i>IoT Core</i>) ekli olduğundan emin ol."
+    ),
+    "setup.account_next": "Access ID ve Secret'ı aldım",
+    # 3. adım: bilgiler
+    "setup.cred_title": "Anahtarlarını gir",
+    "setup.cred_intro": "Değerleri Overview sayfasından kopyala. İpucu: yalnızca kopyalaman yeterli, uygulama panodan kendisi alır.",
     "setup.chars_20": "20 karakter",
     "setup.chars_32": "32 karakter",
     "setup.show": "Göster",
-    "setup.region": "Bölge",
-    "setup.back": "Geri",
-    "setup.find": "Işıkları bul",
+    "setup.field_status": "{got} / {length}",
+    "setup.field_ok": "✓ {got} / {length}",
+    "setup.pasted_id": "Access ID panodan yapıştırıldı.",
+    "setup.pasted_secret": "Access Secret panodan yapıştırıldı.",
+    "setup.advanced": "Gelişmiş  ▾",
+    "setup.region": "Veri merkezi",
+    "setup.region_auto": "Otomatik (önerilen)",
+    "setup.region_hint": "Otomatik seçilirse bölgen tahmin edilir, olmazsa diğerleri sırayla denenir.",
+    "setup.manual_button": "Anahtarı elle gireceğim",
+    "setup.find": "Işıklarımı bul",
     "setup.connecting": "Tuya Cloud'a bağlanılıyor…",
-    "setup.results_title": "Bulunan cihazlar",
-    "setup.results_hint": "Eklemek istediklerinizi işaretleyin.",
+    "setup.retry": "Tekrar dene",
+    # 4. adım: ışık seç
+    "setup.lights_title": "Işıklarını seç ve adlandır",
+    "setup.lights_hint": "Eklemek istediklerini işaretle ve her birine tanıyacağın bir ad ver.",
+    "setup.name_placeholder": "Işığın adı",
+    "setup.scan": "Yakınımdaki ışıkları ara",
+    "setup.scanning": "Yakındaki Bluetooth ışıkları aranıyor…",
+    "setup.scan_found": "Yakında {count} Tuya Bluetooth cihazı bulundu.",
+    "setup.scan_none": "Yakında Tuya Bluetooth cihazı bulunamadı. Işık açık mı, Bluetooth açık mı ve telefondaki Smart Life ışığa bağlı değil mi?",
+    "setup.scan_failed": "Tarama başarısız: {error}",
+    "setup.nearby": "yakında · sinyal {signal}",
+    "setup.signal_strong": "güçlü",
+    "setup.signal_good": "iyi",
+    "setup.signal_weak": "zayıf",
+    "setup.not_seen": "yakında görünmedi",
     "setup.add_selected": "Seçilenleri ekle",
-    "setup.not_light": "(ışık değil)",
-    "setup.already_added": "(zaten ekli, anahtar güncellenir)",
-    "setup.experimental": "(deneysel)",
+    "setup.not_light": "ışık değil",
+    "setup.already_added": "zaten ekli, anahtarı güncellenir",
+    "setup.experimental": "deneysel",
     "setup.experimental_note": "“Deneysel” cihazlar standart ışık komutlarını kullanmayabilir; çalışmazsa günlükten bakın.",
     "setup.pick_one": "Önce en az bir cihaz işaretleyin.",
+    # elle giriş (ileri düzey)
     "setup.manual_title": "Anahtarı elle gir",
     "setup.manual_intro": "Bu bilgileri Tuya Cloud'dan ya da başka bir araçtan zaten aldıysanız kullanın.",
-    "setup.name_placeholder": "ör. Oturma odası",
+    "setup.manual_name_placeholder": "ör. Oturma odası",
     "setup.field_name": "Ad",
     "setup.field_device_id": "Cihaz ID",
     "setup.field_local_key": "Yerel anahtar",
     "setup.field_uuid": "UUID",
     "setup.add": "Ekle",
     "setup.manual_required": "Cihaz ID ve yerel anahtar zorunlu.",
+    # başarı
+    "setup.done_title": "Hazırsın",
+    "setup.done_body": "{names} eklendi. Uygulama şimdi Bluetooth ile ışığa bağlanacak. Bir daha bu adımlara gerek yok.",
+    "setup.done_button": "Uygulamayı aç",
 }
