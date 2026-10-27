@@ -1,8 +1,10 @@
-﻿# Masaüstüne "Odamdaki Işık" kısayolu oluşturur (kur.ps1'den sonra çalıştırın).
+﻿# Masaüstüne "Tuya Desktop App" kısayolu oluşturur (kur.ps1'den sonra çalıştırın).
 $ErrorActionPreference = "Stop"
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
+. (Join-Path $here "installer\app_info.ps1")
+$info = Get-AppInfo   # ad version.py'den gelir
 $pyw = Join-Path $here ".venv\Scripts\pythonw.exe"
-$exe = Join-Path $here "dist\OdamdakiIsik\OdamdakiIsik.exe"
+$exe = Join-Path $here "dist\$($info.Slug)\$($info.Slug).exe"
 $icon = Join-Path $here "assets\app.ico"
 
 if (Test-Path $exe) {
@@ -16,13 +18,13 @@ if (Test-Path $exe) {
 }
 
 $desktop = [Environment]::GetFolderPath("Desktop")
-$link = Join-Path $desktop "Odamdaki Işık.lnk"
+$link = Join-Path $desktop "$($info.Name).lnk"
 $shell = New-Object -ComObject WScript.Shell
 $sc = $shell.CreateShortcut($link)
 $sc.TargetPath = $target
 $sc.Arguments = $arguments
 $sc.WorkingDirectory = $here
 $sc.IconLocation = $icon
-$sc.Description = "Odamdaki ışığı Bluetooth ile kontrol et"
+$sc.Description = "Tuya / Smart Life ışıklarını Bluetooth ile kontrol et"
 $sc.Save()
 Write-Host "Kısayol oluşturuldu: $link" -ForegroundColor Green

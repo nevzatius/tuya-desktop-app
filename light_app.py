@@ -47,6 +47,8 @@ def main() -> int:
         QMessageBox.information(None, APP_NAME, tr("app.already_running"))
         return 0
 
+    dv.migrate_legacy_data()  # eski veri klasöründeki anahtarlar ve enerji kaydı yeni klasöre taşınır
+
     try:
         store = dv.DeviceStore.load(legacy_config=lc.CONFIG_PATH)
     except dv.StoreError as exc:

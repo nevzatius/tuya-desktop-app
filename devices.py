@@ -6,29 +6,86 @@ Eski tek-ışıklı `config.json` varsa ilk açılışta içe aktarılır.
 
 from __future__ import annotations
 
+import filecmp
 import json
+import logging
 import os
+import shutil
 import sys
 from dataclasses import asdict
 from pathlib import Path
 
 import light_core as lc
 from i18n import tr
-from version import DATA_FOLDER
+from version import DATA_FOLDER, LEGACY_DATA_FOLDERS
 
 APP_FOLDER = DATA_FOLDER
 STORE_VERSION = 1
+MIGRATED_FILES = ("devices.json", "energy.db", "energy.db-journal", "energy.db-wal", "energy.db-shm")
+LOGGER = logging.getLogger("tuya_light.devices")
 
 
-def user_data_dir() -> Path:
-    """Windows: %APPDATA%\\OdamdakiIsik, macOS: ~/Library/Application Support, Linux: ~/.config."""
+def data_dir_for(folder: str) -> Path:
+    """Windows: %APPDATA%\\<klasör>, macOS: ~/Library/Application Support/<klasör>, Linux: ~/.config/<klasör>."""
     if sys.platform == "win32":
         base = Path(os.environ.get("APPDATA") or Path.home() / "AppData" / "Roaming")
     elif sys.platform == "darwin":
         base = Path.home() / "Library" / "Application Support"
     else:
         base = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
-    return base / APP_FOLDER
+    return base / folder
+
+
+def user_data_dir() -> Path:
+    """Uygulamanın veri klasörü (version.DATA_FOLDER)."""
+    return data_dir_for(APP_FOLDER)
+
+
+def migrate_legacy_data(new_dir: Path | None = None, legacy_dirs: list[Path] | None = None) -> list[str]:
+    """Eski veri klasöründeki ışık anahtarlarını ve enerji kaydını yeni klasöre taşır; taşınan dosya adlarını döndürür.
+
+    Güvenli sıra: dosya yeni klasöre geçici adla kopyalanır, içeriği eskisiyle birebir doğrulanır, yerine konur;
+    eski dosya ANCAK ondan sonra silinir. Yeni klasörde zaten aynı adlı dosya varsa dokunulmaz (üzerine yazılmaz).
+    Bir adım başarısız olursa eski dosya yerinde kalır, anahtarlar kaybolmaz. Eski klasör boşalırsa kaldırılır.
+    """
+    new_dir = Path(new_dir) if new_dir is not None else user_data_dir()
+    olds = [Path(p) for p in legacy_dirs] if legacy_dirs is not None else [data_dir_for(f) for f in LEGACY_DATA_FOLDERS]
+    moved: list[str] = []
+    for old in olds:
+        if not old.is_dir() or old.resolve() == new_dir.resolve():
+            continue
+        for name in MIGRATED_FILES:
+            source, target = old / name, new_dir / name
+            if not source.is_file() or target.exists():
+                continue
+            temp = target.with_name(target.name + ".migrating")
+            try:
+                new_dir.mkdir(parents=True, exist_ok=True)
+                fd = os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_BINARY", 0), 0o600)
+                with os.fdopen(fd, "wb") as out, open(source, "rb") as src:
+                    shutil.copyfileobj(src, out)
+                if not filecmp.cmp(source, temp, shallow=False):
+                    raise OSError("copy does not match the original")
+                os.replace(temp, target)
+            except OSError:
+                LOGGER.warning("could not migrate %s; the old file was left in place", name)
+                try:
+                    temp.unlink(missing_ok=True)
+                except OSError:
+                    pass
+                continue
+            moved.append(name)
+            try:
+                source.unlink()
+            except OSError:  # örn. eski sürüm hâlâ açık: kopya güvende, eski dosya kalabilir
+                LOGGER.warning("migrated %s but could not remove the old copy", name)
+        try:
+            old.rmdir()  # yalnızca boşsa kalkar
+        except OSError:
+            pass
+    if moved:
+        LOGGER.info("migrated %d file(s) from the previous data folder", len(moved))
+    return moved
 
 
 class StoreError(Exception):

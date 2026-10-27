@@ -1,5 +1,5 @@
 @echo off
-rem Odamdaki Isik - konsol penceresi acmadan baslatir.
+rem Tuya Desktop App - konsol penceresi acmadan baslatir.
 cd /d "%~dp0"
 if not exist ".venv\Scripts\pythonw.exe" (
     echo Once kur.ps1 dosyasini calistirin.

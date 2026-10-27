@@ -465,7 +465,7 @@ def test_client_connected_property_and_colour_hs(fake_ble):
 
 def test_app_dir_points_next_to_executable_when_frozen(monkeypatch, tmp_path):
     monkeypatch.setattr(sys, "frozen", True, raising=False)
-    monkeypatch.setattr(sys, "executable", str(tmp_path / "OdamdakiIsik.exe"))
+    monkeypatch.setattr(sys, "executable", str(tmp_path / "TuyaDesktopApp.exe"))
     assert lc.app_dir() == tmp_path.resolve()
 
 

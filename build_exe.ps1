@@ -35,7 +35,7 @@ if ($code -ne 0) {
 }
 if ($code -ne 0) { Write-Host "Derleme başarısız oldu." -ForegroundColor Red; exit 1 }
 
-# Işıklar kullanıcıya özel klasörde (%APPDATA%\OdamdakiIsik) saklanır; ilk açılışta sihirbaz çıkar.
+# Işıklar kullanıcıya özel klasörde (%APPDATA%\<DATA_FOLDER>, version.py'de) saklanır; ilk açılışta sihirbaz çıkar.
 # Eski tek-ışıklı config.json uygulamanın yanındaysa ilk açılışta otomatik içe aktarılır.
 Write-Host ""
 Write-Host "Hazır: dist\$($info.Slug)\$($info.Slug).exe" -ForegroundColor Green

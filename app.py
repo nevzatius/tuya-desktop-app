@@ -286,9 +286,9 @@ def percent(value: str) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Tuya ışık kontrolü (Bluetooth)")
-    from version import __version__
+    from version import APP_NAME, __version__
 
-    parser.add_argument("--version", action="version", version=f"Odamdaki Işık {__version__}")
+    parser.add_argument("--version", action="version", version=f"{APP_NAME} {__version__}")
     parser.add_argument("-v", "--verbose", action="store_true", help="ayrıntılı günlük")
     sub = parser.add_subparsers(dest="cmd")
     sub.add_parser("gui", help="yeni masaüstü arayüzünü aç (varsayılan)")

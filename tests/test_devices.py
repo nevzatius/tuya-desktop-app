@@ -104,10 +104,10 @@ def test_load_missing_file_gives_empty_store(tmp_path):
 def test_user_data_dir_is_per_platform(monkeypatch, tmp_path):
     monkeypatch.setattr(sys, "platform", "win32")
     monkeypatch.setenv("APPDATA", str(tmp_path))
-    assert dv.user_data_dir() == tmp_path / "OdamdakiIsik"
+    assert dv.user_data_dir() == tmp_path / "TuyaDesktopApp"
     monkeypatch.setattr(sys, "platform", "linux")
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "cfg"))
-    assert dv.user_data_dir() == tmp_path / "cfg" / "OdamdakiIsik"
+    assert dv.user_data_dir() == tmp_path / "cfg" / "TuyaDesktopApp"
 
 
 # -- cloud_import ----------------------------------------------------------------
