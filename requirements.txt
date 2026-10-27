@@ -1,0 +1,8 @@
+# Python 3.12 veya üstü gerekir (tuya-ble-sdk şartı).
+# tuya-ble-sdk'nın iç metotlarına dayandığımız için sürüm sabit.
+tuya-ble-sdk==0.1.3
+bleak>=3.0
+# Arayüz:
+PySide6-Essentials>=6.7
+# Yalnızca get_credentials.py için (Tuya Cloud'dan yerel anahtarı almak):
+tinytuya>=1.20

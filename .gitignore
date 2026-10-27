@@ -1,0 +1,16 @@
+# Gizli bilgiler: yerel anahtar içerir, ASLA yüklenmemeli
+config.json
+devices.json
+tinytuya.json
+tuya-raw.json
+devices.json.tmp
+
+# Python / derleme
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+build/
+dist/
+*.spec
+*.egg-info/

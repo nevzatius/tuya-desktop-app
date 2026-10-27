@@ -1,0 +1,39 @@
+name: Windows sürümü
+
+# v0.2.0 gibi bir etiket (tag) gönderildiğinde Windows .exe klasörünü derler ve sürüme ekler.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      - run: python -m pytest -q tests
+        env:
+          QT_QPA_PLATFORM: offscreen
+      - name: Derle
+        shell: pwsh
+        run: ./build_exe.ps1
+      - name: Zip
+        shell: pwsh
+        run: Compress-Archive -Path dist/OdamdakiIsik -DestinationPath OdamdakiIsik-windows.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OdamdakiIsik-windows
+          path: OdamdakiIsik-windows.zip
+      - name: Sürüme ekle
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: OdamdakiIsik-windows.zip
