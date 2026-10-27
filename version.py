@@ -1,4 +1,4 @@
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 APP_NAME = "Tuya Desktop App"  # görünen uygulama adı (pencere başlığı, mesaj kutuları, yükleyici)
 APP_SLUG = "TuyaDesktopApp"  # boşluksuz ASCII ad: exe, klasör ve yükleyici dosya adları
 DATA_FOLDER = "TuyaDesktopApp"  # %APPDATA% altındaki veri klasörü
