@@ -88,6 +88,10 @@ class MainWindow(QMainWindow):
         self._apply_state(self._state)
         self._on_status(tr("status.connecting"))
 
+    @property
+    def has_tray(self) -> bool:
+        return self._tray is not None
+
     # ------------------------------------------------------------------ yapı
 
     def _build_settings_menu(self) -> None:

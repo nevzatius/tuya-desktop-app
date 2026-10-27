@@ -10,6 +10,11 @@ import sys
 import tempfile
 
 
+def start_hidden(argv: list[str], has_tray: bool) -> bool:
+    """"Windows ile başlat" ile açılınca (--minimized) pencere yerine yalnızca tepsi simgesi görünsün."""
+    return "--minimized" in argv and has_tray
+
+
 def main() -> int:
     from PySide6.QtCore import QLockFile, QSettings, Qt
     from PySide6.QtWidgets import QApplication, QMessageBox
@@ -65,7 +70,8 @@ def main() -> int:
     window = MainWindow(cfg, bridge, energy_log=energy_log)
     tracker = energy.UsageTracker(energy_log) if energy_log is not None else None
     AppController(store, bridge, window, tracker=tracker)
-    window.show()
+    if not start_hidden(sys.argv, window.has_tray):
+        window.show()
     bridge.start()
     code = app.exec()
     bridge.shutdown()

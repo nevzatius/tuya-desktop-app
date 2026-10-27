@@ -1,6 +1,7 @@
-name: Windows sürümü
+name: Windows release
 
-# v0.2.0 gibi bir etiket (tag) gönderildiğinde Windows .exe klasörünü derler ve sürüme ekler.
+# Pushing a tag such as v0.3.0 builds the Windows app, the installer and the portable zip, and attaches them to the release.
+# workflow_dispatch only builds and uploads the files as a workflow artifact (no release is created).
 on:
   push:
     tags: ["v*"]
@@ -22,18 +23,23 @@ jobs:
       - run: python -m pytest -q tests
         env:
           QT_QPA_PLATFORM: offscreen
-      - name: Derle
+      - name: Build the app (PyInstaller)
         shell: pwsh
         run: ./build_exe.ps1
-      - name: Zip
+      - name: Build the installer (Inno Setup)
         shell: pwsh
-        run: Compress-Archive -Path dist/OdamdakiIsik -DestinationPath OdamdakiIsik-windows.zip
+        run: ./installer/build_installer.ps1
+      - name: Collect release files (Setup, portable zip, SHA256SUMS)
+        shell: pwsh
+        run: ./installer/package_release.ps1
       - uses: actions/upload-artifact@v4
         with:
-          name: OdamdakiIsik-windows
-          path: OdamdakiIsik-windows.zip
-      - name: Sürüme ekle
+          name: windows-release
+          path: release-assets/*
+      - name: Attach to the release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: OdamdakiIsik-windows.zip
+          files: release-assets/*
+          body_path: .github/release_body.md
+          generate_release_notes: true

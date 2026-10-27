@@ -14,8 +14,9 @@ from pathlib import Path
 
 import light_core as lc
 from i18n import tr
+from version import DATA_FOLDER
 
-APP_FOLDER = "OdamdakiIsik"
+APP_FOLDER = DATA_FOLDER
 STORE_VERSION = 1
 
 

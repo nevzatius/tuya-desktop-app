@@ -1,7 +1,9 @@
-﻿# Tek klasörlük Windows uygulaması (OdamdakiIsik.exe) üretir.
-# Önce kur.ps1 çalıştırılmış olmalı. Sonuç: dist\OdamdakiIsik\
+﻿# Tek klasörlük Windows uygulaması (<APP_SLUG>.exe, version.py'den) üretir.
+# Önce kur.ps1 çalıştırılmış olmalı. Sonuç: dist\<APP_SLUG>\
 $ErrorActionPreference = "Stop"
 Set-Location (Split-Path -Parent $MyInvocation.MyCommand.Path)
+. ".\installer\app_info.ps1"
+$info = Get-AppInfo   # ad ve surum version.py'den gelir
 $py = ".\.venv\Scripts\python.exe"
 if (-not (Test-Path $py)) {
     if (Get-Command python -ErrorAction SilentlyContinue) { $py = "python" }  # CI ortamı
@@ -16,7 +18,7 @@ if (-not (Test-Path "assets\app.ico")) { & $py make_icon.py }
 
 function Invoke-Build([string[]]$extra) {
     & $py -m PyInstaller --noconfirm --clean --windowed `
-        --name OdamdakiIsik --icon assets\app.ico `
+        --name $($info.Slug) --icon assets\app.ico `
         --add-data "assets;assets" `
         --collect-all bleak `
         --collect-all tuya_ble_sdk `
@@ -36,5 +38,5 @@ if ($code -ne 0) { Write-Host "Derleme başarısız oldu." -ForegroundColor Red;
 # Işıklar kullanıcıya özel klasörde (%APPDATA%\OdamdakiIsik) saklanır; ilk açılışta sihirbaz çıkar.
 # Eski tek-ışıklı config.json uygulamanın yanındaysa ilk açılışta otomatik içe aktarılır.
 Write-Host ""
-Write-Host "Hazır: dist\OdamdakiIsik\OdamdakiIsik.exe" -ForegroundColor Green
+Write-Host "Hazır: dist\$($info.Slug)\$($info.Slug).exe" -ForegroundColor Green
 Write-Host "Kısayol için: .\kisayol_olustur.ps1"
