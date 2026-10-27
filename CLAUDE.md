@@ -9,11 +9,13 @@ Tuya/Smart Life ışıklarını Bluetooth LE ile kontrol eden Windows odaklı ma
   - cloud_import.py: Tuya Cloud'dan içe aktarma; get_credentials.py: aynısının komut satırı hâli
   - energy.py: tahmini tüketim (SQLite energy.db)
   - automation.py: otomasyon motoru (kurallar, zamanlayıcı, yumuşak geçiş); sun.py: gün doğumu/batımı hesabı
+  - quick_cli.py: --scene/--power argüman çözümleme; shortcuts.py: genel kısayol kombinasyonu çözümleme
   - diagnostics.py: tanılama raporu ve günlük/rapor maskeleme (gizli bilgi süzgeci burada)
 - ui/: PySide6 arayüzü
   - main_window, setup_dialog, controller, energy_page, widgets, theme, tray, trouble, workers
   - presets, presets_view, scene_editor: hazır ayarlar ve parlaklık/renk düzenleyici
   - automation_page, rule_dialog, automation_text, automation_host: otomasyon sekmesi ve motoru uygulamaya bağlayan katman
+  - ipc.py (komut satırı için yerel kanal), hotkeys.py (Windows genel kısayolları, RegisterHotKey), tray.py (hazır ayar alt menüsü, otomasyonu duraklat)
   - bridge.py: BLE asyncio iş parçacığı ↔ Qt köprüsü ("son değer kazanır" komut birleştirme)
 - i18n.py + locales/tr.py, locales/en.py: tüm kullanıcı metinleri buradan; koda Türkçe/İngilizce metin gömme
 - light_app.py: giriş noktası; app.py: komut satırı (Türkçe kalır); version.py: sürüm ve veri klasörü adları
@@ -37,4 +39,5 @@ Tuya/Smart Life ışıklarını Bluetooth LE ile kontrol eden Windows odaklı ma
 - Enerji değerleri tahmindir (watt × parlaklık × süre); yalnızca uygulama açık ve bağlıyken kaydedilir.
 - Wi-Fi/LAN kontrolü ve Smart Life QR girişi yok (Tuya istemci kimliği gerekir).
 - Gerçek cihazda doğrulanmayan özellikler README Durum tablosunda "doğrulanmadı" diye işaretli kalır.
-- Dal v0.4.0 üzerinde çalışılıyor: Faz 1 kendi hazır ayarlar, Faz 2 otomasyon motoru, ardından otomasyon arayüzü (ui/automation_*, rule_dialog).
+- Dal v0.4.0 üzerinde çalışılıyor: kendi hazır ayarlar, otomasyon motoru ve sekmesi, hızlı erişim (tepsi, --scene/--power, kısayollar). Hepsi gerçek cihazda henüz doğrulanmadı (README Durum tablosunda işaretli).
+- Otomasyonlar yalnızca uygulama çalışırken, bilgisayar uyanıkken ve ışık menzildeyken çalışır; Smart Life bulut zamanlayıcılarından ayrıdır.

@@ -32,9 +32,11 @@ Control your Tuya / Smart Life lights from your Windows PC over Bluetooth, with 
 
 ## Features
 
-- On/off, brightness, white temperature, colour and six presets (Reading, Focus, Night, Movie, Romantic, Ocean).
+- On/off, brightness, white temperature, colour and six built-in presets (Reading, Focus, Night, Movie, Romantic, Ocean), plus **your own presets**: save the current state, name, edit, delete (built-in ones can be hidden).
 - Several lights; switch, rename or remove them from the title menu.
-- System tray: closing the window keeps the app running; turn the light on/off from the tray. Reconnects by itself.
+- System tray: closing the window keeps the app running; turn the light on/off, apply a preset or pause automations from the tray. Reconnects by itself.
+- **Automations** (experimental, see [Automations](#automations)): at a time, at sunrise/sunset or at app start; smooth fades; one or all lights.
+- **Quick access** (experimental, see [Quick access](#quick-access-tray-command-line-and-shortcuts)): command line (`--scene`, `--power`) and global shortcuts on Windows.
 - Guided setup wizard with clipboard detection, live validation and "Try again" recovery buttons.
 - Scan for nearby lights with signal strength, and a **Blink** button to tell lights apart (experimental, see [Status](#status)).
 - Troubleshooter card for "light not found" and a diagnostic report you can paste into an issue.
@@ -63,6 +65,9 @@ An honest summary of what has and has not been tried on real hardware:
 | Setup wizard v2 (clipboard detection, nearby scan) | Automated tests only — **not yet verified on a real device** |
 | **Blink** button (identify a light) | Experimental — **not yet verified on a real device** |
 | **Troubleshooter** card and diagnostic report | Experimental — **not yet verified on a real device** (the report's privacy filter is covered by tests) |
+| Your own presets (save, edit, delete, hide) | Automated tests only — **not yet verified on a real device** |
+| **Automations** (time / sunrise-sunset / app start triggers, smooth fade, several lights, missed-rule tolerance) | Automated tests only — **not yet verified on a real device** |
+| Tray presets, command line (`--scene`, `--power`) and global shortcuts | Automated tests, including a real Windows `RegisterHotKey` call and a two-process command-line check — **not yet verified on a real device** |
 | Windows installer and portable zip | Build scripts and release workflow written; **not yet built and tried by the maintainer** |
 | English interface | Automated tests and generated screenshots; not yet reviewed on an English-language Windows |
 | Windows 10/11 | Primary target; the UI has had little wide testing on real Windows installs |
@@ -88,6 +93,30 @@ Lights do not measure power. The app estimates: *rated power (W) × brightness �
 - Enter the light's rated power (printed on the packaging, e.g. 9 W) and your electricity rate from your bill.
 - English interface: the rate starts **empty** and you choose your currency (the default follows your system region). Turkish interface: the default is the EPDK residential tariff (April 2026) and the lira; check your own bill, tariffs change.
 - Records are stored locally in `energy.db`, next to your keys.
+
+## Automations
+
+<p align="center">
+  <img src="docs/screenshots/en/automation.png" width="260" alt="Automation tab with three sample rules">
+</p>
+
+> **Not yet verified on a real device.** The engine and the tab are covered by automated tests (time maths, sunrise/sunset against known places, daylight-saving changes, duplicate prevention, retries, fades); the maintainer has not yet watched a rule switch a real light at its time. Treat the first days as a trial.
+
+Open the **Automation** tab and add rules. A rule is *when* → *what* → *which lights*:
+
+- **When:** at a time on chosen weekdays; at sunrise or sunset, optionally some minutes before or after (you enter your location as latitude and longitude; the calculation is done offline in plain Python); or each time the app starts.
+- **What:** turn on, turn off, set brightness (does not turn on a light that is off), white light (brightness + temperature), colour, or apply one of your presets. Optionally **fade smoothly** over 1-120 minutes: brightness (and temperature for white) moves step by step from the current value to the target through the normal command path. If you touch the light by hand during a fade, the fade stops.
+- **Which lights:** all of them or the ones you pick. The selected light is controlled through the normal connection; another light is reached through a short temporary connection, and the window never switches to it. Energy estimates are recorded for the selected light only.
+- **Run now** tries a rule immediately; the switch turns a rule off without deleting it; **Pause automations** (tab or tray menu) stops all of them.
+
+**Limits, plainly:**
+
+- Automations run **only while the app is running, the computer is awake and the light is within Bluetooth range.** A rule that comes due while the app is closed or the computer sleeps does not run.
+- **Missed rules:** if the app wakes or starts within a tolerance (default 10 minutes, adjustable on the tab) after a rule's time, the rule runs once; after that it is skipped. A rule you create or switch on just after its time is not run retroactively. Changing the system clock is safe: the same rule never runs twice for the same day and minute.
+- A light that cannot be reached is tried 3 times (after 10 s and 30 s), then you get a tray notification. A failing rule stays on and runs again next time.
+- **Smart Life's cloud timers and scenes are separate** and are not synchronised with these rules. Rules live only in this app.
+- Only one program can talk to a light at a time over Bluetooth: if your phone's Smart Life is connected, the light cannot be reached.
+- Rules are stored in `automations.json` next to your lights (the file holds your lights' device IDs, never their keys; don't paste it publicly). A damaged file is backed up (`automations.json.bad-<date>`) and the app starts with an empty list.
 
 ## Quick access: tray, command line and shortcuts
 
@@ -149,7 +178,8 @@ The app shows a **troubleshooter card** when it cannot find the light. If that d
 - Smart Life QR sign-in, without a developer account (needs our own Tuya client ID)
 - Code-signed installer (removes the SmartScreen warning)
 - Energy tab for smart plugs that really measure power
-- More light types, scenes and timers; more translations
+- More light types; more translations
+- Automations that keep running without the app (background service)
 
 ## Contributing
 
@@ -192,6 +222,6 @@ python -m pytest tests            # no light needed; Qt runs in offscreen mode
 python docs/make_screenshots.py   # regenerates docs/screenshots/en and /tr with sample data
 ```
 
-Layout: `light_core.py` (BLE session, command encoding), `devices.py` (light store, data-folder migration), `cloud_import.py` (Tuya Cloud import), `energy.py` (estimates), `diagnostics.py` and `privacy.py` (report and masking), `i18n.py` with `locales/` (texts), `ui/` (PySide6 interface), `light_app.py` (entry point), `installer/` (Inno Setup script and build scripts).
+Layout: `light_core.py` (BLE session, command encoding), `devices.py` (light store, data-folder migration), `storage.py` (shared JSON read/write with backups), `cloud_import.py` (Tuya Cloud import), `energy.py` (estimates), `automation.py` and `sun.py` (automation engine, sunrise/sunset), `shortcuts.py` and `quick_cli.py` (shortcut and command-line parsing), `diagnostics.py` and `privacy.py` (report and masking), `i18n.py` with `locales/` (texts), `ui/` (PySide6 interface, including the automation tab, the local command channel `ipc.py` and `hotkeys.py`), `light_app.py` (entry point), `installer/` (Inno Setup script and build scripts).
 
 The command-line helpers (`app.py`, `get_credentials.py`) are developer tools and are still **Turkish-only**. `python app.py scan` lists nearby Tuya BLE devices; `python app.py -h` shows all commands.

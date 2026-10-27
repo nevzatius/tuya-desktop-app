@@ -32,9 +32,11 @@ Tuya / Smart Life ışıklarınızı Windows bilgisayarınızdan Bluetooth ile k
 
 ## Özellikler
 
-- Açma/kapama, parlaklık, beyaz ışık sıcaklığı, renk ve altı hazır ayar (Okuma, Odak, Gece, Film, Romantik, Okyanus).
+- Açma/kapama, parlaklık, beyaz ışık sıcaklığı, renk ve altı yerleşik hazır ayar (Okuma, Odak, Gece, Film, Romantik, Okyanus); ayrıca **kendi hazır ayarlarınız**: şu anki durumu kaydedin, adlandırın, düzenleyin, silin (yerleşikler gizlenebilir).
 - Birden çok ışık; başlıktaki menüden değiştirme, yeniden adlandırma, kaldırma.
-- Sistem tepsisi: pencereyi kapatınca uygulama çalışmaya devam eder; tepsiden ışığı açıp kapatabilirsiniz. Bağlantı koparsa kendiliğinden yeniden bağlanır.
+- Sistem tepsisi: pencereyi kapatınca uygulama çalışmaya devam eder; tepsiden ışığı açıp kapatabilir, hazır ayar uygulayabilir, otomasyonları duraklatabilirsiniz. Bağlantı koparsa kendiliğinden yeniden bağlanır.
+- **Otomasyonlar** (deneysel, bkz. [Otomasyonlar](#otomasyonlar)): belirli saatte, gün doğumu/batımında ya da uygulama açılırken; yumuşak geçiş; bir ya da tüm ışıklar.
+- **Hızlı erişim** (deneysel, bkz. [Hızlı erişim](#hızlı-erişim-tepsi-komut-satırı-ve-kısayollar)): komut satırı (`--scene`, `--power`) ve Windows'ta genel kısayol tuşları.
 - Pano algılama, canlı doğrulama ve "Tekrar dene" düğmeleriyle yönlendirmeli kurulum sihirbazı.
 - Çevredeki ışıkları sinyal gücüyle tarama ve ışıkları ayırt etmek için **Yanıp söndür** düğmesi (deneysel, bkz. [Durum](#durum)).
 - "Işık bulunamadı" için sorun giderici kart ve sorun bildirirken yapıştırabileceğiniz tanılama raporu.
@@ -63,6 +65,9 @@ Gerçek cihazla nelerin denendiğinin, nelerin denenmediğinin dürüst özeti:
 | Kurulum sihirbazı v2 (pano algılama, yakın tarama) | Yalnızca otomatik testler — **gerçek cihazda henüz doğrulanmadı** |
 | **Yanıp söndür** düğmesi (ışığı tanıma) | Deneysel — **gerçek cihazda henüz doğrulanmadı** |
 | **Sorun giderici** kart ve tanılama raporu | Deneysel — **gerçek cihazda henüz doğrulanmadı** (raporun gizlilik filtresi testlerle sınandı) |
+| Kendi hazır ayarlarınız (kaydet, düzenle, sil, gizle) | Yalnızca otomatik testler — **gerçek cihazda henüz doğrulanmadı** |
+| **Otomasyonlar** (saat / gün doğumu-batımı / uygulama açılışı tetikleyicileri, yumuşak geçiş, birden çok ışık, kaçırılan kural toleransı) | Yalnızca otomatik testler — **gerçek cihazda henüz doğrulanmadı** |
+| Tepsi hazır ayarları, komut satırı (`--scene`, `--power`) ve genel kısayol tuşları | Otomatik testler (gerçek bir Windows `RegisterHotKey` çağrısı ve iki süreçli komut satırı denemesi dahil) — **gerçek cihazda henüz doğrulanmadı** |
 | Windows yükleyicisi ve taşınabilir zip | Derleme betikleri ve release iş akışı yazıldı; **geliştirici tarafından henüz derlenip denenmedi** |
 | İngilizce arayüz | Otomatik testler ve üretilen ekran görüntüleri; İngilizce Windows'ta henüz gözden geçirilmedi |
 | Windows 10/11 | Birincil hedef; arayüz gerçek Windows kurulumlarında henüz geniş denenmedi |
@@ -88,6 +93,30 @@ Işıklar güç ölçmez. Uygulama şunu tahmin eder: *anma gücü (W) × parlak
 - Işığın anma gücünü (ambalajında yazar, ör. 9 W) ve faturanızdaki elektrik birim fiyatını girin.
 - Türkçe arayüz: varsayılan fiyat EPDK mesken tarifesidir (Nisan 2026) ve para birimi liradır; kendi faturanıza bakın, tarifeler değişir. İngilizce arayüz: fiyat **boş** başlar ve para birimini siz seçersiniz (varsayılan sistem bölgenize uyar).
 - Kayıtlar yerel olarak, anahtarlarınızın yanındaki `energy.db` dosyasında tutulur.
+
+## Otomasyonlar
+
+<p align="center">
+  <img src="docs/screenshots/tr/automation.png" width="260" alt="Üç örnek kuralın göründüğü Otomasyon sekmesi">
+</p>
+
+> **Gerçek cihazda henüz doğrulanmadı.** Motor ve sekme otomatik testlerle sınandı (saat hesapları, bilinen konumlarda gün doğumu/batımı, yaz saati geçişleri, tekrar önleme, yeniden deneme, yumuşak geçiş); geliştirici henüz bir kuralın gerçek ışığı zamanında açıp kapattığını izlemedi. İlk günleri deneme olarak görün.
+
+**Otomasyon** sekmesini açıp kural ekleyin. Kural: *ne zaman* → *ne yapılsın* → *hangi ışıklar*:
+
+- **Ne zaman:** seçtiğiniz haftanın günlerinde belirli bir saatte; gün doğumu ya da gün batımında (isterseniz birkaç dakika önce/sonra; konumunuzu enlem ve boylam olarak girersiniz, hesap internetsiz, saf Python ile yapılır); ya da uygulama her açıldığında.
+- **Ne yapılsın:** aç, kapat, parlaklık ayarla (kapalı ışığı açmaz), beyaz ışık (parlaklık + sıcaklık), renk ya da hazır ayarlarınızdan birini uygula. İsteğe bağlı olarak 1-120 dakikaya yayılan **yumuşak geçiş**: parlaklık (beyazda sıcaklık da) şu anki değerden hedefe, normal komut yolundan adım adım değişir. Geçiş sırasında ışığa elle dokunursanız geçiş durur.
+- **Hangi ışıklar:** hepsi ya da seçtikleriniz. Seçili ışık normal bağlantıdan, diğerleri kısa süreli geçici bir bağlantıdan yönetilir; pencere o ışığa geçmez. Enerji tahmini yalnızca seçili ışık için kaydedilir.
+- **Şimdi çalıştır** kuralı hemen dener; anahtar kuralı silmeden kapatır; **Otomasyonları duraklat** (sekme ya da tepsi menüsü) hepsini durdurur.
+
+**Sınırlar, açıkça:**
+
+- Otomasyonlar **yalnızca uygulama çalışırken, bilgisayar uyanıkken ve ışık Bluetooth menzilindeyken** çalışır. Uygulama kapalıyken ya da bilgisayar uykudayken zamanı gelen kural çalışmaz.
+- **Kaçırılan kurallar:** uygulama, kuralın saatinden sonra bir tolerans süresi içinde (varsayılan 10 dakika, sekmeden ayarlanır) uyanır ya da açılırsa kural bir kez çalışır; sonrası atlanır. Saatinin hemen ardından oluşturduğunuz ya da açtığınız kural geçmişe dönük çalıştırılmaz. Sistem saatini değiştirmek güvenlidir: aynı kural aynı gün ve dakikada iki kez çalışmaz.
+- Ulaşılamayan ışık 3 kez denenir (10 sn ve 30 sn sonra), olmazsa tepsiden bildirim gelir. Başarısız olan kural açık kalır ve bir sonraki sefer yine çalışır.
+- **Smart Life'ın bulut zamanlayıcıları ve sahneleri bunlardan ayrıdır**, kurallarla eşitlenmez. Kurallar yalnızca bu uygulamadadır.
+- Bluetooth'ta ışıkla aynı anda tek program konuşabilir: telefondaki Smart Life bağlıysa ışığa ulaşılamaz.
+- Kurallar ışıklarınızın yanında `automations.json` dosyasında saklanır (dosyada ışıklarınızın cihaz kimlikleri bulunur, anahtarları asla; herkese açık yere yapıştırmayın). Bozuk dosyanın yedeği alınır (`automations.json.bad-<tarih>`) ve uygulama boş listeyle açılır.
 
 ## Hızlı erişim: tepsi, komut satırı ve kısayollar
 
@@ -149,7 +178,8 @@ Uygulama ışığı bulamadığında bir **sorun giderici kart** gösterir. Çö
 - Geliştirici hesabı gerektirmeyen Smart Life QR girişi (kendi Tuya istemci kimliğimiz gerekir)
 - Kod imzalı yükleyici (SmartScreen uyarısını kaldırır)
 - Gerçekten güç ölçen akıllı prizler için enerji sekmesi
-- Daha fazla ışık türü, sahne ve zamanlayıcı; daha fazla çeviri
+- Daha fazla ışık türü; daha fazla çeviri
+- Uygulama kapalıyken de çalışan otomasyonlar (arka plan hizmeti)
 
 ## Katkıda bulunma
 
@@ -192,6 +222,6 @@ python -m pytest tests            # ışık gerekmez; Qt "offscreen" modunda ça
 python docs/make_screenshots.py   # docs/screenshots/en ve /tr klasörlerini örnek verilerle yeniden üretir
 ```
 
-Yapı: `light_core.py` (BLE oturumu, komut kodlama), `devices.py` (ışık deposu, veri klasörü geçişi), `cloud_import.py` (Tuya Cloud'dan içe aktarma), `energy.py` (tahminler), `diagnostics.py` ve `privacy.py` (rapor ve maskeleme), `i18n.py` ve `locales/` (metinler), `ui/` (PySide6 arayüzü), `light_app.py` (giriş noktası), `installer/` (Inno Setup betiği ve derleme betikleri).
+Yapı: `light_core.py` (BLE oturumu, komut kodlama), `devices.py` (ışık deposu, veri klasörü taşıma), `storage.py` (yedekli ortak JSON okuma/yazma), `cloud_import.py` (Tuya Cloud içe aktarma), `energy.py` (tahminler), `automation.py` ve `sun.py` (otomasyon motoru, gün doğumu/batımı), `shortcuts.py` ve `quick_cli.py` (kısayol ve komut satırı çözümleme), `diagnostics.py` ve `privacy.py` (rapor ve maskeleme), `i18n.py` ve `locales/` (metinler), `ui/` (PySide6 arayüzü; otomasyon sekmesi, yerel komut kanalı `ipc.py` ve `hotkeys.py` dahil), `light_app.py` (giriş noktası), `installer/` (Inno Setup betiği ve derleme betikleri).
 
 Komut satırı araçları (`app.py`, `get_credentials.py`) geliştirici araçlarıdır ve hâlâ **yalnızca Türkçedir**. `python app.py scan` çevredeki Tuya BLE cihazlarını listeler; `python app.py -h` tüm komutları gösterir.

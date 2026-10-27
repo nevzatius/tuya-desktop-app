@@ -5,7 +5,7 @@ Gerçek ışık, yerel anahtar, cihaz kimliği ya da hesap bilgisi kullanılmaz;
     python docs/make_screenshots.py
 
 Çıktı: docs/screenshots/en/*.png ve docs/screenshots/tr/*.png
-(home, color, energy, wizard-keys, wizard-lights)
+(home, color, energy, automation, wizard-keys, wizard-lights)
 """
 
 from __future__ import annotations
@@ -26,11 +26,14 @@ sys.path.insert(0, str(ROOT))
 from PySide6.QtCore import QObject, QSettings, Signal  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
+import automation as au  # noqa: E402
 import cloud_import as ci  # noqa: E402
 import energy as en  # noqa: E402
 import i18n  # noqa: E402
 import light_core as lc  # noqa: E402
+from ui.automation_host import AutomationHost  # noqa: E402
 from ui.main_window import MainWindow  # noqa: E402
+from ui.presets import PresetStore  # noqa: E402
 from ui.setup_dialog import PAGE_CREDENTIALS, PAGE_LIGHTS, SetupDialog  # noqa: E402
 from ui.theme import apply_theme  # noqa: E402
 
@@ -52,6 +55,53 @@ class SampleBridge(QObject):
         if name.startswith("_"):
             raise AttributeError(name)
         return lambda *args, **kwargs: None
+
+
+class SampleBackend:
+    """Otomasyon ana makinesinin beklediği arka uç; ekran görüntüsü için hiçbir ışığa dokunmaz."""
+
+    def __init__(self, lights: dict[str, str]) -> None:
+        self.lights = lights
+
+    def light_ids(self) -> list[str]:
+        return list(self.lights)
+
+    def light_name(self, light_id: str) -> str | None:
+        return self.lights.get(light_id)
+
+    async def state(self, light_id: str):
+        return None
+
+    async def apply(self, light_id: str, command) -> None:
+        return None
+
+    async def release(self, light_id: str) -> None:
+        return None
+
+
+def sample_rules(first_light: str) -> list[au.Rule]:
+    """Örnek otomasyonlar (uydurma ışık kimliği ve genel bir koordinat)."""
+    t = i18n.tr
+    return [
+        au.Rule(
+            name=t("automation.example_sunset_name"),
+            trigger=au.Trigger(kind="sun", event="sunset", offset=-30, lat=41.0, lon=29.0),
+            action=au.Action(kind="white", bright=60, temp=30, fade_min=20),
+            all_lights=True,
+        ),
+        au.Rule(
+            name=t("automation.example_morning_name"),
+            trigger=au.Trigger(kind="time", time="07:00", days=[0, 1, 2, 3, 4]),
+            action=au.Action(kind="white", bright=70, temp=40, fade_min=15),
+            lights=[first_light],
+        ),
+        au.Rule(
+            name=t("preset.night"),
+            trigger=au.Trigger(kind="time", time="23:30"),
+            action=au.Action(kind="preset", preset="night"),
+            all_lights=True,
+        ),
+    ]
 
 
 def sample_usage(log: en.EnergyLog, device: str) -> None:
@@ -91,7 +141,16 @@ def shoot(app: QApplication, lang: str, out: Path, tmp: Path) -> None:
     log = en.EnergyLog(":memory:", clock=lambda: NOW.timestamp())
     sample_usage(log, cfg.device_id)
     bridge = SampleBridge()
-    win = MainWindow(cfg, bridge, settings=settings, use_tray=False, energy_log=log)
+    second = lc.Config(device_id="sample-2", local_key="sample", uuid="sample-2", name=SAMPLE_NAMES[lang][1], category="dj")
+    host = AutomationHost(
+        au.RuleStore(), au.EngineState(), SampleBackend({cfg.device_id: cfg.name, second.device_id: second.name}), submit=lambda c: c.close()
+    )
+    for rule in sample_rules(cfg.device_id):
+        host.add_rule(rule)
+    win = MainWindow(cfg, bridge, settings=settings, use_tray=False, energy_log=log, preset_store=PresetStore(), automation_host=host)
+    win.set_devices([cfg, second], cfg.device_id)
+    win.automation_page._now = lambda: NOW.timestamp()  # "Sonraki: ..." satırı sabit kalsın
+    win.automation_page.refresh()
     win.energy._clock = lambda: NOW.timestamp()
     win.energy.set_device(cfg.device_id, cfg.watts)
     win.resize(430, 860)
@@ -111,6 +170,10 @@ def shoot(app: QApplication, lang: str, out: Path, tmp: Path) -> None:
     win.tab_energy.click()
     app.processEvents()
     win.grab().save(str(out / "energy.png"))
+
+    win.tab_automation.click()
+    app.processEvents()
+    win.grab().save(str(out / "automation.png"))
     win.close()
     log.close()
 
