@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import secrets
+import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -62,6 +63,16 @@ class PresetError(ValueError):
 
 def clean_name(name: str) -> str:
     return " ".join(str(name).split())
+
+
+# Büyük noktalı i (U+0130), büyük I ve noktasız i (U+0131) -> i. Sayısal kod noktaları: kaynakta Türkçe harf kalmasın.
+_DOTTED_I = {0x130: "i", ord("I"): "i", 0x131: "i"}
+
+
+def name_key(name: str) -> str:
+    """Ad karşılaştırma anahtarı: büyük/küçük harf ve Türkçe noktalı/noktasız i farkı yok sayılır."""
+    text = unicodedata.normalize("NFC", clean_name(name))  # ayrık büyük noktalı i (I + U+0307) tek karaktere dönsün
+    return text.translate(_DOTTED_I).casefold()
 
 
 def _clamp(value: object, low: int, high: int, default: int) -> int:
@@ -199,20 +210,20 @@ class PresetStore:
         return next((p for p in self.all() if p.key == key), None)
 
     def find(self, text: str) -> Preset | None:
-        """Ada (büyük/küçük harf fark etmez) ya da kimliğe göre bulur; gizli yerleşik ayarlar da bulunur."""
-        wanted = clean_name(text).casefold()
+        """Ada (büyük/küçük harf ve i/ı farkı yok sayılır) ya da kimliğe göre bulur; gizli yerleşik ayarlar da bulunur."""
+        wanted = name_key(text)
         if not wanted:
             return None
         for preset in (*self._user, *PRESETS):
-            if preset.name.casefold() == wanted or preset.key.casefold() == wanted:
+            if name_key(preset.name) == wanted or preset.key.casefold() == wanted:
                 return preset
         return None
 
     # -- değişiklik -----------------------------------------------------------
 
     def _name_taken(self, name: str, ignore: str = "") -> bool:
-        wanted = name.casefold()
-        return any(p.name.casefold() == wanted for p in self.all() if p.key != ignore)
+        wanted = name_key(name)
+        return any(name_key(p.name) == wanted for p in self.all() if p.key != ignore)
 
     def _check_name(self, name: str, ignore: str = "") -> str:
         name = clean_name(name)

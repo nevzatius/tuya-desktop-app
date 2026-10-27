@@ -20,7 +20,7 @@ from PySide6.QtWidgets import QApplication, QDialog  # noqa: E402
 
 import light_core as lc  # noqa: E402
 from ui.main_window import MainWindow  # noqa: E402
-from ui.presets import MAX_NAME, MAX_USER_PRESETS, PRESETS, PresetError, PresetStore  # noqa: E402
+from ui.presets import MAX_NAME, MAX_USER_PRESETS, PRESETS, PresetError, PresetStore, name_key  # noqa: E402
 from ui.presets_view import ManagePresetsDialog, PresetDialog, PresetsSection  # noqa: E402
 from ui.theme import apply_theme  # noqa: E402
 
@@ -127,6 +127,26 @@ def test_find_by_name_or_key_is_case_insensitive_and_sees_hidden_builtins(tmp_pa
     assert store.find("film").key == "movie" and store.find("MOVIE").key == "movie"
     assert store.find(" çalışma ").key == mine.key and store.find(mine.key).key == mine.key
     assert store.find("yok böyle") is None and store.find("") is None
+
+
+def test_find_survives_turkish_upper_and_lower_case(tmp_path):
+    store = PresetStore(tmp_path / "presets.json")
+    desk = store.add("Çalışma masası", "white", 60)
+    lamp = store.add("İlk Işık", "white", 50)
+    assert store.find("ÇALIŞMA MASASI").key == desk.key and store.find("çalışma masası").key == desk.key
+    assert store.find("ÇALIŞMA MASASI") is store.find("Çalışma Masası")
+    assert store.find("İLK IŞIK").key == lamp.key and store.find("ilk ışık").key == lamp.key
+    assert store.find("ILK ISIK") is None  # ş/ı ayrımı yok sayılmaz, yalnızca i/ı/İ/I birleşir
+    assert store.find("FİLM").key == "movie" and store.find("FILM").key == "movie"
+    assert name_key("İlk") == name_key("İlk")  # ayrık İ
+
+
+def test_names_differing_only_in_turkish_case_count_as_duplicates(tmp_path):
+    store = PresetStore(tmp_path / "presets.json")
+    store.add("Işık", "white", 60)
+    with pytest.raises(PresetError) as err:
+        store.add("IŞIK", "white", 60)
+    assert err.value.code == "duplicate"
 
 
 def test_the_file_holds_no_secrets(tmp_path):
