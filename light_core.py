@@ -43,6 +43,7 @@ from tuya_ble_sdk import (
 )
 
 from i18n import tr
+from privacy import redact
 
 LOGGER = logging.getLogger("tuya_light")
 
@@ -511,8 +512,8 @@ def friendly_error(exc: BaseException) -> str:
     if isinstance(exc, TuyaBleHandshakeTimeoutError):
         return tr("error.handshake")
     if isinstance(exc, (TuyaBleError, BleakError, TimeoutError, OSError)):
-        return tr("error.bluetooth", error=exc)
-    return tr("error.unexpected", error=repr(exc))
+        return tr("error.bluetooth", error=redact(exc))
+    return tr("error.unexpected", error=redact(repr(exc)))
 
 
 class LightClient:
@@ -546,7 +547,12 @@ class LightClient:
         if self._on_status:
             self._on_status(text)
 
+    def _secrets(self) -> tuple[str, ...]:
+        cfg = self.cfg
+        return (cfg.local_key, cfg.device_id, cfg.uuid, cfg.address)
+
     def _log(self, text: str) -> None:
+        text = redact(text, self._secrets())  # günlüğe anahtar/kimlik/adres girmesin
         LOGGER.debug(text)
         if self._on_log:
             self._on_log(text)
@@ -579,14 +585,14 @@ class LightClient:
         )
         session: LightSession | None = None
         for index, device in enumerate(candidates):
-            self._log(f"Found: {device.address} {device.name or ''}")
+            self._log(f"Found candidate {index + 1} of {len(candidates)}")
             self._status(tr("status.connecting"))
             attempt = LightSession(device, creds, self._on_dps)
             try:
                 await attempt.open()
             except (TuyaBleAuthenticationError, TuyaBleHandshakeTimeoutError) as exc:
                 if index + 1 < len(candidates):  # başka bir cihaz olabilir: sıradakini dene
-                    self._log(f"{device.address} is not our light ({exc.__class__.__name__}); trying the next one")
+                    self._log(f"Candidate {index + 1} is not our light ({exc.__class__.__name__}); trying the next one")
                     continue
                 self._status(tr("status.failed"))
                 raise
@@ -677,3 +683,54 @@ class LightClient:
     async def set_colour_hs(self, hue: int, sat: int, bright_pct: float = 100) -> None:
         """Doğrudan cihazın birimleriyle renk: H 0-360, S 0-1000."""
         await self.send(cmd_colour(self.cfg, hue, sat, pct_to_bright(bright_pct)))
+
+
+# --------------------------------------------------------------------------
+# Yanıp söndürme (hangi ışığın hangisi olduğunu bulmak için)
+# --------------------------------------------------------------------------
+
+BLINK_TIMES = 2
+BLINK_PAUSE = 0.6
+STATE_WAIT = 2.0
+
+
+async def blink_light(
+    cfg: Config,
+    times: int = BLINK_TIMES,
+    pause: float = BLINK_PAUSE,
+    state_wait: float = STATE_WAIT,
+    client_factory: Callable[[Config], Any] | None = None,
+) -> bool:
+    """Işığa bağlanır, kısa süre kapatıp açar (`times` kez) ve eski güç durumuna döndürür.
+
+    Bağlanma `LightClient` ile yapılır: `find_candidates` adayları sinyal gücüne göre dener, doğru yerel
+    anahtarla el sıkışan ışık bizimdir. Yalnızca güç aç/kapa değişir; parlaklık ve renk olduğu gibi kalır.
+    Başlangıç durumu okunamazsa ışık yanıyormuş varsayılır (karanlıkta bırakılmaz).
+
+    İstemci hiçbir dinleyici olmadan kurulur: yanıp sönme enerji kaydına hiç ulaşmaz, yani geçici durum
+    değişikliği tüketim tahminini bozmaz. Başlangıçta yanıyor muydu (bool) döndürür.
+    """
+    client = (client_factory or LightClient)(cfg)
+    was_on = True
+    try:
+        await client.connect()
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + state_wait
+        while client.state.power is None and loop.time() < deadline:
+            await asyncio.sleep(0.1)
+        was_on = client.state.power is not False
+        try:
+            for _ in range(times):
+                await client.set_power(not was_on)
+                await asyncio.sleep(pause)
+                await client.set_power(was_on)
+                await asyncio.sleep(pause)
+        except BaseException:
+            try:  # yarıda kesilirse ışık söner kalmasın
+                await client.set_power(was_on)
+            except Exception:  # noqa: BLE001
+                LOGGER.debug("could not restore power after a failed blink", exc_info=True)
+            raise
+        return was_on
+    finally:
+        await client.close()

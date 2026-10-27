@@ -56,6 +56,11 @@ def default_scanner() -> list:
     return asyncio.run(lc.scan_tuya_devices(SCAN_SECONDS))
 
 
+def default_blinker(cfg: lc.Config) -> bool:
+    """Işığı yanıp söndürür (ayrı iş parçacığında çağrılır)."""
+    return asyncio.run(lc.blink_light(cfg))
+
+
 def signal_text(rssi: int | None) -> str:
     """Sinyal gücünün (dBm) okunur karşılığı."""
     if rssi is None:
@@ -121,7 +126,9 @@ class StepIndicator(QWidget):
 
 
 class DeviceRow(QFrame):
-    """4. adımdaki bir satır: işaret kutusu, ad kutusu ve durum notları."""
+    """4. adımdaki bir satır: işaret kutusu, ad kutusu, "Yanıp söndür" düğmesi ve durum notları."""
+
+    blinkRequested = Signal(object)  # bu satır
 
     def __init__(self, device: ci.FoundDevice, known: bool, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -129,6 +136,8 @@ class DeviceRow(QFrame):
         self.device = device
         self._notes: list[str] = []
         self._nearby = ""
+        self._blink_note = ""
+        self._blink_bad = False
         lay = QVBoxLayout(self)
         lay.setContentsMargins(14, 12, 14, 12)
         lay.setSpacing(8)
@@ -140,8 +149,18 @@ class DeviceRow(QFrame):
         self.status = QLabel("")
         self.status.setObjectName("muted")
         self.status.setWordWrap(True)
+        # Yanıp söndürme yalnızca henüz eklenmemiş ışıklar için: ekli ışığa uygulama zaten bağlı olabilir
+        # ve BLE'de ışığa aynı anda tek bağlantı olur.
+        self.blink_button = QPushButton(tr("setup.blink"))
+        self.blink_button.setObjectName("ghost")
+        self.blink_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.blink_button.setVisible(device.is_light and not known)
+        self.blink_button.clicked.connect(lambda: self.blinkRequested.emit(self))
+        name_row = QHBoxLayout()
+        name_row.addWidget(self.name_edit, 1)
+        name_row.addWidget(self.blink_button)
         lay.addWidget(self.check)
-        lay.addWidget(self.name_edit)
+        lay.addLayout(name_row)
         lay.addWidget(self.status)
         if not device.is_light:
             self._notes.append(tr("setup.not_light"))
@@ -155,10 +174,18 @@ class DeviceRow(QFrame):
         self._nearby = text
         self._refresh_status()
 
+    def set_blink_note(self, text: str, bad: bool = False) -> None:
+        self._blink_note, self._blink_bad = text, bad
+        self._refresh_status()
+
     def _refresh_status(self) -> None:
         parts = [*self._notes, *([self._nearby] if self._nearby else [])]
-        self.status.setText(" · ".join(parts))
-        self.status.setVisible(bool(parts))
+        text = " · ".join(parts)
+        if self._blink_note:
+            text = f"{text}\n{self._blink_note}" if text else self._blink_note
+        self.status.setText(text)
+        self.status.setStyleSheet(f"color: {DANGER};" if self._blink_bad and self._blink_note else "")
+        self.status.setVisible(bool(text))
 
     @property
     def is_experimental(self) -> bool:
@@ -178,6 +205,7 @@ class SetupDialog(QDialog):
         parent: QWidget | None = None,
         scanner: Callable[[], list] | None = None,
         open_url: Callable[[str], Any] | None = None,
+        blinker: Callable[[lc.Config], bool] | None = None,
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle(tr("setup.title"))
@@ -187,9 +215,12 @@ class SetupDialog(QDialog):
         self._existing = existing_ids or set()
         self._fetcher = fetcher or ci.fetch
         self._scanner = scanner or default_scanner
+        self._blinker = blinker or default_blinker
         self._open_url = open_url or (lambda url: QDesktopServices.openUrl(QUrl(url)))
         self._worker: _Worker | None = None
         self._scan_worker: _Worker | None = None
+        self._blink_worker: _Worker | None = None
+        self._blinking_row: DeviceRow | None = None
         self._submitted_secret = ""
         self._found: list[ci.FoundDevice] = []
         self._rows: list[DeviceRow] = []
@@ -536,6 +567,7 @@ class SetupDialog(QDialog):
         page, lay = self._page()
         lay.addWidget(self._title(tr("setup.lights_title")))
         lay.addWidget(self._text(tr("setup.lights_hint")))
+        lay.addWidget(self._text(tr("setup.blink_hint"), "muted"))
         self.rows_holder = QWidget()
         self.rows_layout = QVBoxLayout(self.rows_holder)
         self.rows_layout.setContentsMargins(0, 0, 6, 0)
@@ -575,6 +607,7 @@ class SetupDialog(QDialog):
         self._found = found
         for dev in found:
             row = DeviceRow(dev, known=dev.config.device_id in self._existing)
+            row.blinkRequested.connect(self._start_blink)
             self._rows.append(row)
             self.rows_layout.insertWidget(self.rows_layout.count() - 1, row)
         self.results_note.setText(tr("setup.experimental_note") if any(r.is_experimental for r in self._rows) else "")
@@ -593,8 +626,46 @@ class SetupDialog(QDialog):
 
     # -- yakın tarama -----------------------------------------------------------
 
+    def _ble_busy(self) -> bool:
+        """Bluetooth adaptörü aynı anda tek işe bakar: tarama ve yanıp söndürme birbirini beklemez, engeller."""
+        return self._scan_worker is not None or self._blink_worker is not None
+
+    def _set_ble_buttons(self) -> None:
+        busy = self._ble_busy()
+        self.scan_button.setEnabled(not busy)
+        for row in self._rows:
+            row.blink_button.setEnabled(not busy)
+
+    # -- yanıp söndürme ---------------------------------------------------------
+
+    def _start_blink(self, row: DeviceRow) -> None:
+        if self._ble_busy():
+            return
+        row.set_blink_note(tr("setup.blinking"))
+        worker = _Worker(self._blinker, (row.device.config,), _explain_scan)
+        worker.done.connect(self._blink_done)
+        worker.failed.connect(self._blink_failed)
+        worker.finished.connect(self._blink_finished)
+        self._blink_worker, self._blinking_row = worker, row
+        self._set_ble_buttons()
+        worker.start()
+
+    def _blink_done(self, _was_on: object) -> None:
+        if self._blinking_row is not None:
+            self._blinking_row.set_blink_note(tr("setup.blink_done"))
+
+    def _blink_failed(self, message: str, _kind: str = "other") -> None:
+        if self._blinking_row is not None:
+            self._blinking_row.set_blink_note(tr("setup.blink_failed", error=message), bad=True)
+
+    def _blink_finished(self) -> None:
+        self._blink_worker = None
+        self._set_ble_buttons()
+
+    # -- yakın tarama -----------------------------------------------------------
+
     def _start_scan(self) -> None:
-        if self._scan_worker is not None:
+        if self._ble_busy():
             return
         self.scan_button.setEnabled(False)
         self._show_scan_note(tr("setup.scanning"))
@@ -603,11 +674,12 @@ class SetupDialog(QDialog):
         worker.failed.connect(self._scan_failed)
         worker.finished.connect(self._scan_finished)
         self._scan_worker = worker
+        self._set_ble_buttons()
         worker.start()
 
     def _scan_finished(self) -> None:
         self._scan_worker = None
-        self.scan_button.setEnabled(True)
+        self._set_ble_buttons()
 
     def _show_scan_note(self, text: str, bad: bool = False) -> None:
         self.scan_note.setText(text)
@@ -619,6 +691,8 @@ class SetupDialog(QDialog):
 
     def _scan_done(self, nearby: list) -> None:
         by_uuid = {d.uuid: d for d in nearby if getattr(d, "uuid", None)}
+        mine = {row.device.config.uuid for row in self._rows if row.device.is_light}
+        others = [d for d in nearby if getattr(d, "uuid", None) not in mine]  # kimliği çözülemeyenler dahil
         for row in self._rows:
             if not row.device.is_light:
                 continue
@@ -628,7 +702,14 @@ class SetupDialog(QDialog):
                 row.set_nearby(tr("setup.nearby", signal=signal_text(seen.rssi)))
             else:
                 row.set_nearby(tr("setup.not_seen"))
-        self._show_scan_note(tr("setup.scan_found", count=len(nearby)) if nearby else tr("setup.scan_none"))
+        if not nearby:
+            self._show_scan_note(tr("setup.scan_none"))
+            return
+        note = tr("setup.scan_found", count=len(nearby))
+        if others:  # sinyal gücüne göre en yakın eşleşmeyen cihaz (adres/kimlik gösterilmez)
+            best = max(others, key=lambda d: d.rssi if d.rssi is not None else -999)
+            note += " " + tr("setup.scan_unmatched", count=len(others), signal=signal_text(best.rssi))
+        self._show_scan_note(note)
 
     # ----------------------------------------------------------- elle giriş (ileri düzey)
 
