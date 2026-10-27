@@ -108,6 +108,13 @@ QPushButton#deviceBtn {{
 QPushButton#deviceBtn:hover {{ background: {SURFACE_2}; }}
 QPushButton#deviceBtn::menu-indicator {{ image: none; width: 0px; }}
 
+QPushButton#iconBtn {{
+    background: transparent; border: none; color: {MUTED}; font-size: 16px;
+    padding: 2px 6px; border-radius: 8px;
+}}
+QPushButton#iconBtn:hover {{ background: {SURFACE_2}; color: {TEXT}; }}
+QPushButton#iconBtn::menu-indicator {{ image: none; width: 0px; }}
+
 QPlainTextEdit#log {{
     background: #0a0c10; border: 1px solid {BORDER}; border-radius: 12px; padding: 8px;
     font-family: "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace; font-size: 11px; color: #9aa3b8;

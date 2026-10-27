@@ -6,6 +6,8 @@ from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QMenu, QSystemTrayIcon
 
+from i18n import tr
+
 
 class TrayController(QObject):
     power_requested = Signal(bool)
@@ -18,11 +20,11 @@ class TrayController(QObject):
         self._tray = QSystemTrayIcon(icon, self)
         self._tray.setToolTip(title)
         menu = QMenu()
-        menu.addAction("Işığı aç").triggered.connect(lambda: self.power_requested.emit(True))
-        menu.addAction("Işığı kapat").triggered.connect(lambda: self.power_requested.emit(False))
+        menu.addAction(tr("tray.on")).triggered.connect(lambda: self.power_requested.emit(True))
+        menu.addAction(tr("tray.off")).triggered.connect(lambda: self.power_requested.emit(False))
         menu.addSeparator()
-        menu.addAction("Pencereyi göster").triggered.connect(self.show_requested.emit)
-        menu.addAction("Çık").triggered.connect(self.quit_requested.emit)
+        menu.addAction(tr("tray.show")).triggered.connect(self.show_requested.emit)
+        menu.addAction(tr("tray.quit")).triggered.connect(self.quit_requested.emit)
         self._menu = menu  # referansı tut
         self._tray.setContextMenu(menu)
         self._tray.activated.connect(self._on_activated)

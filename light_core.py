@@ -42,6 +42,8 @@ from tuya_ble_sdk import (
     parse_advertisement,
 )
 
+from i18n import tr
+
 LOGGER = logging.getLogger("tuya_light")
 
 def app_dir() -> Path:
@@ -96,7 +98,7 @@ class Config:
     device_id: str
     local_key: str
     uuid: str
-    name: str = "Odamdaki ışık"
+    name: str = field(default_factory=lambda: tr("device.default_name"))
     address: str = ""  # en son görülen BLE adresi (sadece bilgi)
     dps: dict[str, int] = field(default_factory=lambda: dict(DEFAULT_DPS))
     colour_type: str = "string"  # colour_data_v2 DP tipi: "string" veya "raw"
@@ -107,24 +109,21 @@ class Config:
     @classmethod
     def load(cls, path: Path = CONFIG_PATH) -> Config:
         if not path.exists():
-            raise ConfigError(
-                f"{path.name} bulunamadı. Önce `python get_credentials.py` "
-                "komutunu çalıştırın."
-            )
+            raise ConfigError(tr("error.config_missing", name=path.name))
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
-            raise ConfigError(f"{path.name} okunamadı: {exc}") from exc
+            raise ConfigError(tr("error.config_unreadable", name=path.name, error=exc)) from exc
         missing = [k for k in ("device_id", "local_key") if not data.get(k)]
         if missing:
-            raise ConfigError(f"{path.name} içinde eksik alan: {', '.join(missing)}")
+            raise ConfigError(tr("error.config_field", name=path.name, fields=", ".join(missing)))
         dps = dict(DEFAULT_DPS)
         dps.update({k: int(v) for k, v in (data.get("dps") or {}).items()})
         return cls(
             device_id=data["device_id"],
             local_key=data["local_key"],
             uuid=data.get("uuid", ""),
-            name=data.get("name") or "Odamdaki ışık",
+            name=data.get("name") or tr("device.default_name"),
             address=data.get("address", ""),
             dps=dps,
             colour_type=data.get("colour_type", "string"),
@@ -165,7 +164,7 @@ def _encode_value(data_type: DataPointType, value: DPValue) -> bytes:
             if isinstance(value, str):
                 return value.encode()
             return bytes(value)  # type: ignore[arg-type]
-    raise ValueError(f"Bilinmeyen DP tipi: {data_type}")
+    raise ValueError(f"Unknown DP type: {data_type}")
 
 
 def encode_data_points(dps: list[DPWrite]) -> bytes:
@@ -174,7 +173,7 @@ def encode_data_points(dps: list[DPWrite]) -> bytes:
     for identifier, data_type, value in dps:
         raw = _encode_value(data_type, value)
         if not 0 <= identifier <= 255 or len(raw) > 255:
-            raise ValueError(f"DP {identifier} kodlanamadı")
+            raise ValueError(f"DP {identifier} could not be encoded")
         out += bytes([identifier, int(data_type), len(raw)]) + raw
     return bytes(out)
 
@@ -435,7 +434,7 @@ async def find_candidates(
                 unidentified = sorted((d for d in seen if d.uuid is None), key=lambda d: -(d.rssi or -999))
                 other_known = [d for d in seen if d.uuid is not None and d.uuid != cfg.uuid]
                 if unidentified and not other_known:
-                    LOGGER.info("uuid çözülemedi; %d aday denenecek", len(unidentified[:MAX_GUESSES]))
+                    LOGGER.info("uuid could not be resolved; trying %d candidate(s)", len(unidentified[:MAX_GUESSES]))
                     return [d.device for d in unidentified[:MAX_GUESSES]]
             await asyncio.sleep(0.2)
     return [found.result()] if found.done() else []
@@ -478,7 +477,7 @@ class LightSession(TuyaBleClient):
                 await self._async_handshake()
         except TimeoutError as exc:
             await self._async_disconnect()
-            raise TuyaBleConnectionError("Bağlantı zaman aşımına uğradı") from exc
+            raise TuyaBleConnectionError(tr("error.timeout")) from exc
         except BaseException:
             await self._async_disconnect()
             raise
@@ -506,23 +505,14 @@ def friendly_error(exc: BaseException) -> str:
     if isinstance(exc, ConfigError):
         return str(exc)
     if isinstance(exc, LightNotFound):
-        return (
-            "Işık bulunamadı. Bluetooth açık mı, ışığa yakın mısınız ve telefondaki "
-            "Smart Life uygulaması ışığa bağlı değil mi? (BLE'de aynı anda tek bağlantı olur)"
-        )
+        return tr("error.not_found")
     if isinstance(exc, TuyaBleAuthenticationError):
-        return (
-            "Işık anahtarı reddetti. Yerel anahtar eski olabilir (ışığı Smart Life'tan silip yeniden eklediyseniz değişir): "
-            "üstteki menüden “Işık ekle…” ile anahtarı yenileyin. Yakında aynı modelden başka ışıklar da olabilir."
-        )
+        return tr("error.auth_rejected")
     if isinstance(exc, TuyaBleHandshakeTimeoutError):
-        return (
-            "Işık el sıkışmaya yanıt vermedi. Yerel anahtar yanlış olabilir ya da "
-            "cihaz bu BLE protokolünü desteklemiyor (hem Wi-Fi hem Bluetooth'lu her cihaz desteklemez)."
-        )
+        return tr("error.handshake")
     if isinstance(exc, (TuyaBleError, BleakError, TimeoutError, OSError)):
-        return f"Bluetooth hatası: {exc}"
-    return f"Beklenmeyen hata: {exc!r}"
+        return tr("error.bluetooth", error=exc)
+    return tr("error.unexpected", error=repr(exc))
 
 
 class LightClient:
@@ -579,40 +569,40 @@ class LightClient:
         if self._session is not None and self._session.connected:
             return
         await self._drop()
-        self._status("Işık aranıyor…")
+        self._status(tr("status.searching"))
         candidates = await find_candidates(self.cfg)
         if not candidates:
-            self._status("Işık bulunamadı")
+            self._status(tr("status.not_found"))
             raise LightNotFound()
         creds = TuyaBleCredentials(
             uuid=self.cfg.uuid, device_id=self.cfg.device_id, local_key=self.cfg.local_key
         )
         session: LightSession | None = None
         for index, device in enumerate(candidates):
-            self._log(f"Bulundu: {device.address} {device.name or ''}")
-            self._status("Bağlanılıyor…")
+            self._log(f"Found: {device.address} {device.name or ''}")
+            self._status(tr("status.connecting"))
             attempt = LightSession(device, creds, self._on_dps)
             try:
                 await attempt.open()
             except (TuyaBleAuthenticationError, TuyaBleHandshakeTimeoutError) as exc:
                 if index + 1 < len(candidates):  # başka bir cihaz olabilir: sıradakini dene
-                    self._log(f"{device.address} bizim ışık değil ({exc.__class__.__name__}); sıradaki deneniyor")
+                    self._log(f"{device.address} is not our light ({exc.__class__.__name__}); trying the next one")
                     continue
-                self._status("Bağlantı kurulamadı")
+                self._status(tr("status.failed"))
                 raise
             except BaseException:
-                self._status("Bağlantı kurulamadı")
+                self._status(tr("status.failed"))
                 raise
             session = attempt
             self.cfg.address = device.address
             break
         assert session is not None
         self._session = session
-        self._status("Bağlı")
+        self._status(tr("status.connected"))
         try:
             await session.request_status()
         except TuyaBleError as exc:  # durum okuma zorunlu değil
-            self._log(f"Durum istenemedi: {exc}")
+            self._log(f"Could not request status: {exc}")
 
     async def _drop(self) -> None:
         session, self._session = self._session, None
@@ -620,12 +610,12 @@ class LightClient:
             try:
                 await session.close()
             except Exception:  # noqa: BLE001 - kapatma hatası önemsiz
-                LOGGER.debug("kapatma hatası", exc_info=True)
+                LOGGER.debug("close error", exc_info=True)
 
     async def close(self) -> None:
         async with self._lock:
             await self._drop()
-            self._status("Bağlantı kapalı")
+            self._status(tr("status.closed"))
 
     async def reconnect(self) -> None:
         async with self._lock:
@@ -642,13 +632,13 @@ class LightClient:
                     await self._connect_locked()
                     assert self._session is not None
                     ack = await self._session.send_data_points(dps)
-                    self._log(f"Gönderildi {[d[0] for d in dps]}, yanıt={ack.hex() or '-'}")
+                    self._log(f"Sent {[d[0] for d in dps]}, reply={ack.hex() or '-'}")
                     self._apply_optimistic(dps)
                     return
                 except (TuyaBleAuthenticationError, TuyaBleHandshakeTimeoutError, LightNotFound):
                     raise
                 except (TuyaBleError, BleakError, TimeoutError, OSError) as exc:
-                    self._log(f"Gönderim hatası (deneme {attempt}): {exc}")
+                    self._log(f"Send error (attempt {attempt}): {exc}")
                     await self._drop()
                     if attempt == 2:
                         raise

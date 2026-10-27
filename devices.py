@@ -13,6 +13,7 @@ from dataclasses import asdict
 from pathlib import Path
 
 import light_core as lc
+from i18n import tr
 
 APP_FOLDER = "OdamdakiIsik"
 STORE_VERSION = 1
@@ -52,7 +53,7 @@ class DeviceStore:
                     store._devices[cfg.device_id] = cfg
                 store.selected = data.get("selected", "")
             except (OSError, ValueError, KeyError, TypeError) as exc:
-                raise StoreError(f"{store.path} okunamadı: {exc}") from exc
+                raise StoreError(tr("error.store_unreadable", path=store.path, error=exc)) from exc
         elif legacy_config is not None and Path(legacy_config).exists():
             try:  # eski tek-ışıklı kurulumdan geçiş
                 store.add(lc.Config.load(Path(legacy_config)))
@@ -118,14 +119,14 @@ class DeviceStore:
 
 def _config_from_dict(data: dict) -> lc.Config:
     if not data.get("device_id") or not data.get("local_key"):
-        raise KeyError("device_id/local_key eksik")
+        raise KeyError(tr("error.store_incomplete"))
     dps = dict(lc.DEFAULT_DPS)
     dps.update({k: int(v) for k, v in (data.get("dps") or {}).items()})
     return lc.Config(
         device_id=data["device_id"],
         local_key=data["local_key"],
         uuid=data.get("uuid", ""),
-        name=data.get("name") or "Işık",
+        name=data.get("name") or tr("device.fallback_name"),
         address=data.get("address", ""),
         dps=dps,
         colour_type=data.get("colour_type", "string"),

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QSettings, Qt, Signal
-from PySide6.QtGui import QColor, QIcon, QKeySequence, QPainter, QPixmap, QShortcut
+from PySide6.QtGui import QActionGroup, QColor, QIcon, QKeySequence, QPainter, QPixmap, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
     QButtonGroup,
@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QMainWindow,
     QMenu,
+    QMessageBox,
     QPlainTextEdit,
     QPushButton,
     QScrollArea,
@@ -23,7 +24,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+import i18n
 import light_core as lc
+from i18n import tr
+from version import APP_NAME
 
 from .energy_page import EnergyPage
 from .colors import COOL, NEUTRAL, WARM, accent_for, hex_of, hs_rgb, shade
@@ -32,7 +36,6 @@ from .presets import PRESETS, Preset
 from .tray import TrayController
 from .widgets import ColorWheel, GradientSlider, PowerButton, StatusPill
 
-MODE_TR = {"white": "Beyaz ışık", "colour": "Renkli", "scene": "Sahne", "music": "Müzik"}
 PAGE_WHITE, PAGE_COLOUR = 0, 1
 
 
@@ -83,9 +86,35 @@ class MainWindow(QMainWindow):
             self._setup_tray()
         self.set_devices([cfg], cfg.device_id)
         self._apply_state(self._state)
-        self._on_status("Bağlanılıyor…")
+        self._on_status(tr("status.connecting"))
 
     # ------------------------------------------------------------------ yapı
+
+    def _build_settings_menu(self) -> None:
+        """Ayarlar menüsü: şimdilik dil seçimi (Sistem dili / Türkçe / English)."""
+        language_menu = self.settings_menu.addMenu(tr("main.language"))
+        group = QActionGroup(language_menu)
+        group.setExclusive(True)
+        current = str(self._settings.value(i18n.SETTINGS_KEY, i18n.AUTO))
+        self.language_actions: dict[str, object] = {}
+        choices = [(i18n.AUTO, tr("main.language_auto")), *i18n.LANGUAGES.items()]
+        for code, label in choices:
+            action = language_menu.addAction(label)
+            action.setCheckable(True)
+            action.setChecked(code == current or (current not in dict(choices) and code == i18n.AUTO))
+            action.triggered.connect(lambda _=False, c=code: self._on_language(c))
+            group.addAction(action)
+            self.language_actions[code] = action
+
+    def _on_language(self, code: str) -> None:
+        """Seçimi kaydeder; arayüz çalışırken yeniden çevrilmez, yeni dil bir sonraki açılışta geçerli olur."""
+        if str(self._settings.value(i18n.SETTINGS_KEY, i18n.AUTO)) == code:
+            return
+        self._settings.setValue(i18n.SETTINGS_KEY, code)
+        self.show_info(tr("main.language_restart"))
+
+    def show_info(self, text: str) -> None:
+        QMessageBox.information(self, APP_NAME, text)
 
     def set_devices(self, devices: list[lc.Config], selected: str) -> None:
         """Başlıktaki ışık seçici menüsünü yeniler."""
@@ -97,17 +126,17 @@ class MainWindow(QMainWindow):
             self._device_actions[dev.device_id] = action
         if devices:
             self.device_menu.addSeparator()
-        self.device_menu.addAction("Işık ekle…", self.addRequested.emit)
-        rename = self.device_menu.addAction("Adını değiştir…", self.renameRequested.emit)
-        remove = self.device_menu.addAction("Bu ışığı kaldır", self.removeRequested.emit)
+        self.device_menu.addAction(tr("main.add_light"), self.addRequested.emit)
+        rename = self.device_menu.addAction(tr("main.rename"), self.renameRequested.emit)
+        remove = self.device_menu.addAction(tr("main.remove"), self.removeRequested.emit)
         rename.setEnabled(bool(devices))
         remove.setEnabled(bool(devices))
         current = next((d for d in devices if d.device_id == selected), None)
         if current is not None:
             self.cfg = current
         if not devices:
-            self.device_button.setText("Işık yok  ▾")
-            self.setWindowTitle("Odamdaki Işık")
+            self.device_button.setText(tr("main.no_light_button"))
+            self.setWindowTitle(APP_NAME)
         else:
             self.device_button.setText(f"{self.cfg.name}  ▾")
             self.setWindowTitle(self.cfg.name)
@@ -116,10 +145,10 @@ class MainWindow(QMainWindow):
         """Hiç ışık kalmadı."""
         self._state = lc.LightState()
         self._apply_state(self._state)
-        self.device_button.setText("Işık yok  ▾")
-        self.setWindowTitle("Odamdaki Işık")
-        self._set_pill("Işık yok", "idle")
-        self.banner.setText("Henüz ışık eklenmedi. Üstteki menüden “Işık ekle…” seçin.")
+        self.device_button.setText(tr("main.no_light_button"))
+        self.setWindowTitle(APP_NAME)
+        self._set_pill(tr("status.no_light"), "idle")
+        self.banner.setText(tr("main.no_light_banner"))
         self.banner.show()
 
     def _choose_device(self, device_id: str) -> None:
@@ -136,7 +165,7 @@ class MainWindow(QMainWindow):
         self.banner.hide()
         self._state = lc.LightState()
         self._apply_state(self._state)
-        self._on_status("Bağlanılıyor…")
+        self._on_status(tr("status.connecting"))
 
     def _card(self, title: str, value_label: QLabel | None = None) -> tuple[QFrame, QVBoxLayout]:
         frame = QFrame()
@@ -145,7 +174,7 @@ class MainWindow(QMainWindow):
         box.setContentsMargins(18, 16, 18, 16)
         box.setSpacing(8)
         row = QHBoxLayout()
-        label = QLabel(title.upper())
+        label = QLabel(i18n.upper(title))
         label.setObjectName("cardTitle")
         row.addWidget(label)
         row.addStretch()
@@ -178,6 +207,14 @@ class MainWindow(QMainWindow):
         head.addWidget(self.device_button)
         head.addStretch()
         head.addWidget(self.pill)
+        self.settings_button = QPushButton("⚙")
+        self.settings_button.setObjectName("iconBtn")
+        self.settings_button.setToolTip(tr("main.settings"))
+        self.settings_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.settings_menu = QMenu(self.settings_button)
+        self.settings_button.setMenu(self.settings_menu)
+        self._build_settings_menu()
+        head.addWidget(self.settings_button)
         top_lay.addLayout(head)
 
         self.banner = QLabel()
@@ -192,8 +229,8 @@ class MainWindow(QMainWindow):
         tabs.setContentsMargins(4, 4, 4, 4)
         tabs.setSpacing(4)
         self.tab_group = QButtonGroup(self)
-        self.tab_control = QPushButton("Kontrol")
-        self.tab_energy = QPushButton("Enerji")
+        self.tab_control = QPushButton(tr("main.tab_control"))
+        self.tab_energy = QPushButton(tr("main.tab_energy"))
         for button in (self.tab_control, self.tab_energy):
             button.setObjectName("seg")
             button.setCheckable(True)
@@ -248,7 +285,7 @@ class MainWindow(QMainWindow):
         # Parlaklık
         self.bright_value = QLabel("%50")
         self.bright_value.setObjectName("value")
-        card, box = self._card("Parlaklık", self.bright_value)
+        card, box = self._card(tr("main.brightness"), self.bright_value)
         self.bright = GradientSlider(fill=True)
         self.bright.setRange(1, 100)
         self.bright.setValue(50)
@@ -261,8 +298,8 @@ class MainWindow(QMainWindow):
         seg_row = QHBoxLayout(seg_wrap)
         seg_row.setContentsMargins(4, 4, 4, 4)
         seg_row.setSpacing(4)
-        self.seg_white = QPushButton("Beyaz")
-        self.seg_colour = QPushButton("Renk")
+        self.seg_white = QPushButton(tr("main.white"))
+        self.seg_colour = QPushButton(tr("main.colour"))
         group = QButtonGroup(self)
         group.setExclusive(True)
         for button in (self.seg_white, self.seg_colour):
@@ -279,14 +316,14 @@ class MainWindow(QMainWindow):
         lay.addWidget(self.stack)
 
         # Sayfa 0: beyaz sıcaklığı
-        self.temp_value = QLabel("Sıcak")
+        self.temp_value = QLabel(tr("main.warm"))
         self.temp_value.setObjectName("value")
-        white_card, white_box = self._card("Işık sıcaklığı", self.temp_value)
+        white_card, white_box = self._card(tr("main.temperature"), self.temp_value)
         self.temp = GradientSlider([(0.0, WARM), (0.5, NEUTRAL), (1.0, COOL)])
         self.temp.setRange(0, 100)
         white_box.addWidget(self.temp)
         ends = QHBoxLayout()
-        warm_label, cool_label = QLabel("Sıcak"), QLabel("Soğuk")
+        warm_label, cool_label = QLabel(tr("main.warm")), QLabel(tr("main.cool"))
         warm_label.setObjectName("muted")
         cool_label.setObjectName("muted")
         ends.addWidget(warm_label)
@@ -298,7 +335,7 @@ class MainWindow(QMainWindow):
         # Sayfa 1: renk çarkı
         self.hex_label = QLabel("")
         self.hex_label.setObjectName("hex")
-        colour_card, colour_box = self._card("Renk", self.hex_label)
+        colour_card, colour_box = self._card(tr("main.colour"), self.hex_label)
         self.wheel = ColorWheel(220)
         colour_box.addWidget(self.wheel, 0, Qt.AlignmentFlag.AlignHCenter)
         self.stack.addWidget(colour_card)
@@ -306,7 +343,7 @@ class MainWindow(QMainWindow):
         self._select_page("white")
 
         # Hazır ayarlar
-        presets_title = QLabel("HAZIR AYARLAR")
+        presets_title = QLabel(i18n.upper(tr("main.presets")))
         presets_title.setObjectName("cardTitle")
         lay.addWidget(presets_title)
         grid = QGridLayout()
@@ -326,12 +363,12 @@ class MainWindow(QMainWindow):
 
         # Araçlar + günlük
         tools = QHBoxLayout()
-        self.log_toggle = QPushButton("Günlük")
+        self.log_toggle = QPushButton(tr("main.log"))
         self.log_toggle.setObjectName("ghost")
         self.log_toggle.setCheckable(True)
-        self.reconnect_button = QPushButton("Yeniden bağlan")
+        self.reconnect_button = QPushButton(tr("main.reconnect"))
         self.reconnect_button.setObjectName("ghost")
-        self.refresh_button = QPushButton("Durumu oku")
+        self.refresh_button = QPushButton(tr("main.read_state"))
         self.refresh_button.setObjectName("ghost")
         for button in (self.log_toggle, self.reconnect_button, self.refresh_button):
             button.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -380,7 +417,7 @@ class MainWindow(QMainWindow):
             self.bridge.set_brightness(value)
 
     def _on_temp(self, value: int) -> None:
-        self.temp_value.setText("Sıcak" if value < 34 else "Nötr" if value < 67 else "Soğuk")
+        self.temp_value.setText(tr("main.warm") if value < 34 else tr("main.neutral") if value < 67 else tr("main.cool"))
         if not self._syncing:
             self.bridge.set_white(self.bright.value(), value)
 
@@ -451,23 +488,23 @@ class MainWindow(QMainWindow):
         self.bright.set_stops([(0.0, shade(accent, 0.30)), (1.0, accent)])
 
         if st.power is True:
-            self.state_label.setText("Açık")
-            mode = MODE_TR.get(st.mode or "", "")
+            self.state_label.setText(tr("state.on"))
+            mode = tr(f"mode.{st.mode}") if st.mode in lc.MODES else ""
             self.sub_label.setText(f"{mode} · %{self.bright.value()}" if mode else f"%{self.bright.value()}")
         elif st.power is False:
-            self.state_label.setText("Kapalı")
-            self.sub_label.setText("Açmak için dokun")
+            self.state_label.setText(tr("state.off"))
+            self.sub_label.setText(tr("state.tap_to_turn_on"))
         else:
             self.state_label.setText("—")
-            self.sub_label.setText("Işıktan bilgi bekleniyor")
+            self.sub_label.setText(tr("state.waiting"))
         if self._tray is not None:
-            self._tray.set_tooltip({True: "Açık", False: "Kapalı", None: ""}[st.power])
+            self._tray.set_tooltip({True: tr("state.on"), False: tr("state.off"), None: ""}[st.power])
 
     def _set_pill(self, text: str, tone: str) -> None:
         self.pill.set_status(text, tone)
 
     def _on_status(self, text: str) -> None:
-        tone = "ok" if text == "Bağlı" else "warn" if text.endswith("…") else "bad"
+        tone = "ok" if text == tr("status.connected") else "warn" if text.endswith("…") else "bad"
         self._set_pill(text, tone)
 
     def _on_connected(self, ok: bool) -> None:
@@ -477,7 +514,7 @@ class MainWindow(QMainWindow):
     def _on_error(self, text: str) -> None:
         self.banner.setText(text)
         self.banner.show()
-        self._on_log("HATA: " + text)
+        self._on_log("ERROR: " + text)
 
     def _on_log(self, text: str) -> None:
         self.log_view.appendPlainText(text)
@@ -521,7 +558,7 @@ class MainWindow(QMainWindow):
             self.hide()
             if not self._tray_hint_shown:
                 self._tray_hint_shown = True
-                self._tray.notify(self.cfg.name, "Uygulama sistem tepsisinde çalışmaya devam ediyor.")
+                self._tray.notify(self.cfg.name, tr("tray.hint"))
             return
         if self._tray is not None:
             self._tray.hide()

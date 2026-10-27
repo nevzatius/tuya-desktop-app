@@ -24,22 +24,11 @@ from PySide6.QtWidgets import (
 
 import cloud_import as ci
 import light_core as lc
+from i18n import tr
 
 from .icons import app_icon
 
 PAGE_START, PAGE_CLOUD, PAGE_RESULTS, PAGE_MANUAL = range(4)
-
-CLOUD_HELP = (
-    "<b>Bir kerelik hazırlık (yaklaşık 10 dakika)</b><br>"
-    "1. <a href='https://iot.tuya.com'>iot.tuya.com</a> adresinde ücretsiz hesap açın.<br>"
-    "2. Cloud → Development → <i>Create Cloud Project</i>. Industry: <i>Smart Home</i>, "
-    "Development Method: <i>Smart Home</i>, Data Center: bulunduğunuz bölge (Türkiye için Central/Western Europe).<br>"
-    "3. Projenin <i>Overview</i> sayfasındaki <i>Access ID</i> ve <i>Access Secret</i> değerlerini aşağıya yapıştırın.<br>"
-    "4. Projede <i>Devices → Link App Account → Add App Account</i> deyip çıkan QR kodu telefonunuzdaki "
-    "Smart Life uygulamasıyla okutun (Ben → sağ üstteki tarama simgesi). Işıklarınız projeye bağlanır.<br>"
-    "Bilgileriniz yalnızca bu bilgisayarda saklanır; Access Secret ise hiç kaydedilmez."
-)
-
 
 class _FetchWorker(QThread):
     done = Signal(list, str)
@@ -56,7 +45,7 @@ class _FetchWorker(QThread):
         except ci.CloudError as exc:
             self.failed.emit(str(exc))
         except Exception as exc:  # noqa: BLE001
-            self.failed.emit(f"Beklenmeyen hata: {exc}")
+            self.failed.emit(tr("error.unexpected", error=exc))
         else:
             self.done.emit(found, used)
 
@@ -64,7 +53,7 @@ class _FetchWorker(QThread):
 class SetupDialog(QDialog):
     def __init__(self, existing_ids: set[str] | None = None, fetcher: Callable | None = None, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Işık ekle")
+        self.setWindowTitle(tr("setup.title"))
         self.setWindowIcon(app_icon())
         self.setModal(True)
         self.resize(480, 600)
@@ -111,17 +100,13 @@ class SetupDialog(QDialog):
         lay = QVBoxLayout(page)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(12)
-        lay.addWidget(self._title("Işık ekle"))
+        lay.addWidget(self._title(tr("setup.title")))
         lay.addWidget(
-            self._text(
-                "Bir Tuya / Smart Life ışığını Bluetooth ile kontrol etmek için ışığa özel bir "
-                "<b>yerel anahtar</b> gerekir. Bu anahtarı yalnızca ışığın bağlı olduğu Tuya hesabı verebilir; "
-                "bir kez alındıktan sonra uygulama internetsiz çalışır."
-            )
+            self._text(tr("setup.intro"))
         )
-        self.cloud_button = QPushButton("Tuya hesabımdan otomatik al (önerilen)")
+        self.cloud_button = QPushButton(tr("setup.cloud_button"))
         self.cloud_button.setObjectName("primary")
-        self.manual_button = QPushButton("Anahtarı elle gireceğim (ileri düzey)")
+        self.manual_button = QPushButton(tr("setup.manual_button"))
         self.manual_button.setObjectName("ghost")
         self.cloud_button.clicked.connect(lambda: self.stack.setCurrentIndex(PAGE_CLOUD))
         self.manual_button.clicked.connect(lambda: self.stack.setCurrentIndex(PAGE_MANUAL))
@@ -129,7 +114,7 @@ class SetupDialog(QDialog):
         lay.addWidget(self.cloud_button)
         lay.addWidget(self.manual_button)
         lay.addStretch()
-        cancel = QPushButton("Vazgeç")
+        cancel = QPushButton(tr("setup.cancel"))
         cancel.setObjectName("ghost")
         cancel.clicked.connect(self.reject)
         lay.addWidget(cancel, 0, Qt.AlignmentFlag.AlignRight)
@@ -140,8 +125,8 @@ class SetupDialog(QDialog):
         lay = QVBoxLayout(page)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(10)
-        lay.addWidget(self._title("Tuya Cloud ile ekle"))
-        self.help_toggle = QPushButton("Nasıl alırım?  ▾")
+        lay.addWidget(self._title(tr("setup.cloud_title")))
+        self.help_toggle = QPushButton(tr("setup.how"))
         self.help_toggle.setObjectName("ghost")
         self.help_toggle.setCheckable(True)
         lay.addWidget(self.help_toggle, 0, Qt.AlignmentFlag.AlignLeft)
@@ -149,7 +134,7 @@ class SetupDialog(QDialog):
         self.help_box.setObjectName("card")
         hb = QVBoxLayout(self.help_box)
         hb.setContentsMargins(14, 12, 14, 12)
-        hb.addWidget(self._text(CLOUD_HELP, "muted"))
+        hb.addWidget(self._text(tr("setup.cloud_help"), "muted"))
         self.help_box.hide()
         self.help_toggle.toggled.connect(self.help_box.setVisible)
         lay.addWidget(self.help_box)
@@ -158,11 +143,11 @@ class SetupDialog(QDialog):
         form.setSpacing(10)
         form.setLabelAlignment(Qt.AlignmentFlag.AlignLeft)
         self.access_id = QLineEdit()
-        self.access_id.setPlaceholderText("20 karakter")
+        self.access_id.setPlaceholderText(tr("setup.chars_20"))
         self.secret = QLineEdit()
         self.secret.setEchoMode(QLineEdit.EchoMode.Password)
-        self.secret.setPlaceholderText("32 karakter")
-        self.show_secret = QCheckBox("Göster")
+        self.secret.setPlaceholderText(tr("setup.chars_32"))
+        self.show_secret = QCheckBox(tr("setup.show"))
         self.show_secret.toggled.connect(
             lambda on: self.secret.setEchoMode(QLineEdit.EchoMode.Normal if on else QLineEdit.EchoMode.Password)
         )
@@ -170,11 +155,11 @@ class SetupDialog(QDialog):
         secret_row.addWidget(self.secret)
         secret_row.addWidget(self.show_secret)
         self.region = QComboBox()
-        for code, label in ci.REGIONS.items():
-            self.region.addItem(f"{label} ({code})", code)
+        for code in ci.REGIONS:
+            self.region.addItem(f"{ci.region_label(code)} ({code})", code)
         form.addRow("Access ID", self.access_id)
         form.addRow("Access Secret", secret_row)
-        form.addRow("Bölge", self.region)
+        form.addRow(tr("setup.region"), self.region)
         lay.addLayout(form)
 
         self.cloud_message = self._text("", "muted")
@@ -183,10 +168,10 @@ class SetupDialog(QDialog):
         lay.addStretch()
 
         row = QHBoxLayout()
-        back = QPushButton("Geri")
+        back = QPushButton(tr("setup.back"))
         back.setObjectName("ghost")
         back.clicked.connect(lambda: self.stack.setCurrentIndex(PAGE_START))
-        self.find_button = QPushButton("Işıkları bul")
+        self.find_button = QPushButton(tr("setup.find"))
         self.find_button.setObjectName("primary")
         self.find_button.clicked.connect(self._start_fetch)
         row.addWidget(back)
@@ -200,17 +185,17 @@ class SetupDialog(QDialog):
         lay = QVBoxLayout(page)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(10)
-        lay.addWidget(self._title("Bulunan cihazlar"))
-        lay.addWidget(self._text("Eklemek istediklerinizi işaretleyin."))
+        lay.addWidget(self._title(tr("setup.results_title")))
+        lay.addWidget(self._text(tr("setup.results_hint")))
         self.device_list = QListWidget()
         lay.addWidget(self.device_list, 1)
         self.results_note = self._text("", "muted")
         lay.addWidget(self.results_note)
         row = QHBoxLayout()
-        back = QPushButton("Geri")
+        back = QPushButton(tr("setup.back"))
         back.setObjectName("ghost")
         back.clicked.connect(lambda: self.stack.setCurrentIndex(PAGE_CLOUD))
-        self.add_button = QPushButton("Seçilenleri ekle")
+        self.add_button = QPushButton(tr("setup.add_selected"))
         self.add_button.setObjectName("primary")
         self.add_button.clicked.connect(self._add_selected)
         row.addWidget(back)
@@ -224,30 +209,30 @@ class SetupDialog(QDialog):
         lay = QVBoxLayout(page)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(10)
-        lay.addWidget(self._title("Anahtarı elle gir"))
-        lay.addWidget(self._text("Bu bilgileri Tuya Cloud'dan ya da başka bir araçtan zaten aldıysanız kullanın."))
+        lay.addWidget(self._title(tr("setup.manual_title")))
+        lay.addWidget(self._text(tr("setup.manual_intro")))
         form = QFormLayout()
         form.setSpacing(10)
         self.m_name = QLineEdit()
-        self.m_name.setPlaceholderText("ör. Oturma odası")
+        self.m_name.setPlaceholderText(tr("setup.name_placeholder"))
         self.m_id = QLineEdit()
         self.m_key = QLineEdit()
         self.m_key.setEchoMode(QLineEdit.EchoMode.Password)
         self.m_uuid = QLineEdit()
-        form.addRow("Ad", self.m_name)
-        form.addRow("Cihaz ID", self.m_id)
-        form.addRow("Yerel anahtar", self.m_key)
-        form.addRow("UUID", self.m_uuid)
+        form.addRow(tr("setup.field_name"), self.m_name)
+        form.addRow(tr("setup.field_device_id"), self.m_id)
+        form.addRow(tr("setup.field_local_key"), self.m_key)
+        form.addRow(tr("setup.field_uuid"), self.m_uuid)
         lay.addLayout(form)
         self.manual_message = self._text("", "muted")
         self.manual_message.hide()
         lay.addWidget(self.manual_message)
         lay.addStretch()
         row = QHBoxLayout()
-        back = QPushButton("Geri")
+        back = QPushButton(tr("setup.back"))
         back.setObjectName("ghost")
         back.clicked.connect(lambda: self.stack.setCurrentIndex(PAGE_START))
-        self.manual_add = QPushButton("Ekle")
+        self.manual_add = QPushButton(tr("setup.add"))
         self.manual_add.setObjectName("primary")
         self.manual_add.clicked.connect(self._add_manual)
         row.addWidget(back)
@@ -271,7 +256,7 @@ class SetupDialog(QDialog):
         if problem:
             self._show_cloud_message(problem, bad=True)
             return
-        self._show_cloud_message("Tuya Cloud'a bağlanılıyor…")
+        self._show_cloud_message(tr("setup.connecting"))
         self.find_button.setEnabled(False)
         worker = _FetchWorker(self._fetcher, access_id, secret, self.region.currentData(), self)
         worker.done.connect(self._fetch_done)
@@ -303,17 +288,17 @@ class SetupDialog(QDialog):
                 item.setCheckState(Qt.CheckState.Unchecked if known else Qt.CheckState.Checked)
             else:
                 item.setCheckState(Qt.CheckState.Unchecked)
-                item.setText(f"{dev.label}  (ışık değil)")
+                item.setText(f"{dev.label}  {tr('setup.not_light')}")
             if known:
-                item.setText(f"{item.text()}  (zaten ekli, anahtar güncellenir)")
+                item.setText(f"{item.text()}  {tr('setup.already_added')}")
             if dev.is_light and not dev.is_standard:
                 has_non_standard = True
-                item.setText(f"{item.text()}  (deneysel)")
+                item.setText(f"{item.text()}  {tr('setup.experimental')}")
             item.setData(Qt.ItemDataRole.UserRole, dev.config.device_id)
             self.device_list.addItem(item)
         note = ""
         if has_non_standard:
-            note = "“Deneysel” cihazlar standart ışık komutlarını kullanmayabilir; çalışmazsa günlükten bakın."
+            note = tr("setup.experimental_note")
         self.results_note.setText(note)
         self.stack.setCurrentIndex(PAGE_RESULTS)
 
@@ -325,7 +310,7 @@ class SetupDialog(QDialog):
         }
         self._added = [d.config for d in self._found if d.config.device_id in chosen]
         if not self._added:
-            self.results_note.setText("Önce en az bir cihaz işaretleyin.")
+            self.results_note.setText(tr("setup.pick_one"))
             return
         self.accept()
 
@@ -334,7 +319,7 @@ class SetupDialog(QDialog):
     def _add_manual(self) -> None:
         device_id, key = ci.clean(self.m_id.text()), self.m_key.text().strip()
         if not device_id or not key:
-            self.manual_message.setText("Cihaz ID ve yerel anahtar zorunlu.")
+            self.manual_message.setText(tr("setup.manual_required"))
             self.manual_message.setStyleSheet("color: #ff9a9a;")
             self.manual_message.show()
             return
@@ -343,7 +328,7 @@ class SetupDialog(QDialog):
                 device_id=device_id,
                 local_key=key,
                 uuid=ci.clean(self.m_uuid.text()),
-                name=self.m_name.text().strip() or "Işık",
+                name=self.m_name.text().strip() or tr("device.fallback_name"),
             )
         ]
         self.accept()

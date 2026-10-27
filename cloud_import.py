@@ -12,24 +12,21 @@ from dataclasses import dataclass
 from typing import Any
 
 import light_core as lc
+from i18n import tr
 
-REGIONS = {
-    "eu": "Orta Avrupa (Türkiye için genelde bu)",
-    "eu-w": "Batı Avrupa",
-    "us": "Batı ABD",
-    "us-e": "Doğu ABD",
-    "in": "Hindistan",
-    "sg": "Singapur",
-    "cn": "Çin",
-}
+REGIONS = ("eu", "eu-w", "us", "us-e", "in", "sg", "cn")  # Tuya veri merkezi kodları
 ID_LENGTH, SECRET_LENGTH = 20, 32
 
 # Tuya ışık kategorileri. Yalnızca "dj" bu uygulamanın DP haritasıyla birebir uyumludur.
 LIGHT_CATEGORIES = {"dj", "dd", "xdd", "fwd", "dc", "tgq", "tyndj", "fsd"}
 
 
+def region_label(code: str) -> str:
+    return tr(f"region.{code}")
+
+
 class CloudError(Exception):
-    """Kullanıcıya gösterilebilir Türkçe bulut hatası."""
+    """Kullanıcıya gösterilebilir (çevrilmiş) bulut hatası."""
 
 
 @dataclass
@@ -50,11 +47,11 @@ def clean(value: str) -> str:
 
 
 def validate_credentials(access_id: str, secret: str) -> str | None:
-    """Sorun varsa Türkçe açıklama, yoksa None."""
+    """Sorun varsa kullanıcıya gösterilecek açıklama, yoksa None."""
     if len(access_id) != ID_LENGTH:
-        return f"Access ID {ID_LENGTH} karakter olmalı (şu an {len(access_id)})."
+        return tr("cloud.id_length", length=ID_LENGTH, got=len(access_id))
     if len(secret) != SECRET_LENGTH:
-        return f"Access Secret {SECRET_LENGTH} karakter olmalı (şu an {len(secret)}). Yapıştırırken karakter kaybolmuş olabilir."
+        return tr("cloud.secret_length", length=SECRET_LENGTH, got=len(secret))
     return None
 
 
@@ -64,7 +61,7 @@ def connect(access_id: str, secret: str, region: str, cloud_factory: Callable[..
         try:
             import tinytuya
         except ImportError as exc:
-            raise CloudError("tinytuya yüklü değil. kur.ps1'i yeniden çalıştırın.") from exc
+            raise CloudError(tr("cloud.no_tinytuya")) from exc
         cloud_factory = tinytuya.Cloud
     last = ""
     for candidate in [region] + [r for r in REGIONS if r != region]:
@@ -83,12 +80,12 @@ def connect(access_id: str, secret: str, region: str, cloud_factory: Callable[..
 def _explain(raw: str) -> str:
     low = raw.lower()
     if "sign invalid" in low or "911" in low:
-        return "Access ID veya Secret yanlış (ya da bu bölgeye ait değil). Değerleri iot.tuya.com'dan yeniden kopyalayın."
+        return tr("cloud.sign_invalid")
     if "permission" in low or "1106" in low:
-        return "Proje bu işlem için yetkili değil. Cloud projesinde 'Smart Home' API paketlerinin ekli olduğundan emin olun."
+        return tr("cloud.permission")
     if "token" in low:
-        return "Tuya Cloud'dan oturum alınamadı. Bilgileri ve internet bağlantısını kontrol edin."
-    return f"Tuya Cloud bağlantısı başarısız: {raw or 'bilinmeyen hata'}"
+        return tr("cloud.token")
+    return tr("cloud.failed", error=raw or tr("cloud.unknown_error"))
 
 
 def _result(response: Any) -> dict:
@@ -115,7 +112,7 @@ def list_devices(cloud: Any) -> list[FoundDevice]:
     raw = cloud.getdevices()
     if isinstance(raw, dict):
         message = raw.get("Error") or raw.get("Payload") or raw
-        raise CloudError(f"Cihaz listesi alınamadı: {message}")
+        raise CloudError(tr("cloud.list_failed", error=message))
     found: list[FoundDevice] = []
     for item in raw or []:
         device_id, key = item.get("id", ""), item.get("key") or item.get("local_key") or ""
@@ -126,17 +123,14 @@ def list_devices(cloud: Any) -> list[FoundDevice]:
             device_id=device_id,
             local_key=key,
             uuid=item.get("uuid", ""),
-            name=item.get("name") or item.get("product_name") or "Işık",
+            name=item.get("name") or item.get("product_name") or tr("device.fallback_name"),
             address=item.get("mac", ""),
             category=category,
             product_name=item.get("product_name", ""),
         )
         found.append(FoundDevice(cfg, category in LIGHT_CATEGORIES, category == "dj"))
     if not found:
-        raise CloudError(
-            "Bu projeye bağlı cihaz bulunamadı. Cloud projesinde Devices → Link App Account bölümünden "
-            "Smart Life hesabınızı QR ile bağlayın."
-        )
+        raise CloudError(tr("cloud.no_devices"))
     found.sort(key=lambda d: (not d.is_light, d.config.name.lower()))
     for d in found:
         if d.is_light:  # DP numaralarını cihazın gerçek özelliklerinden oku

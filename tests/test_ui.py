@@ -319,7 +319,7 @@ def test_status_pill_error_banner_and_tools(window):
     assert win.banner.isHidden()
     bridge.error.emit("Bir sorun var")
     assert not win.banner.isHidden() and win.banner.text() == "Bir sorun var"
-    assert "HATA: Bir sorun var" in win.log_view.toPlainText()
+    assert "ERROR: Bir sorun var" in win.log_view.toPlainText()
     bridge.connectedChanged.emit(True)
     assert win.banner.isHidden()
     win.refresh_button.click()

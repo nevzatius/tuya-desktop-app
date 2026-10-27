@@ -54,10 +54,10 @@ def make_page(settings, log):
 
 def test_page_periods_show_cost_and_duration(qapp, settings, log):
     page = make_page(settings, log)
-    assert page.cost_label.text() == en.fmt_tl(2 * 3.37)
+    assert page.cost_label.text() == en.fmt_money(2 * 3.37)
     assert "2,00 kWh" in page.detail_label.text() and "2 sa" in page.detail_label.text()
     page.period_buttons["week"].click()
-    assert page.period_title.text() == "SON 7 GÜN" and page.cost_label.text() == en.fmt_tl(3 * 3.37)
+    assert page.period_title.text() == "SON 7 GÜN" and page.cost_label.text() == en.fmt_money(3 * 3.37)
     page.period_buttons["month"].click()
     assert page.period_title.text() == "SON 30 GÜN" and len(page.chart._buckets) == 30
     page.period_buttons["day"].click()
@@ -69,7 +69,7 @@ def test_price_change_recalculates_persists_and_emits(qapp, settings, log):
     got = []
     page.priceChanged.connect(got.append)
     page.price.setValue(5.0)
-    assert page.cost_label.text() == en.fmt_tl(10.0) and got == [5.0]
+    assert page.cost_label.text() == en.fmt_money(10.0) and got == [5.0]
     assert float(settings.value("energy/price")) == 5.0
     again = EnergyPage(settings, log)
     assert again.price.value() == 5.0 and again.price_value == 5.0

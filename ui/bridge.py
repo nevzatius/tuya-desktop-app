@@ -99,7 +99,7 @@ class LightBridge(QObject):
         try:
             asyncio.run_coroutine_threadsafe(self._client.close(), self._loop).result(timeout=5)
         except Exception:  # noqa: BLE001 - kapanırken hata önemsiz
-            LOGGER.debug("kapatma hatası", exc_info=True)
+            LOGGER.debug("close error", exc_info=True)
         self._loop.call_soon_threadsafe(self._loop.stop)
         self._thread.join(timeout=3)
 
@@ -216,7 +216,7 @@ class LightBridge(QObject):
         try:
             await old.close()
         except Exception:  # noqa: BLE001
-            LOGGER.debug("eski bağlantı kapatılamadı", exc_info=True)
+            LOGGER.debug("could not close the previous connection", exc_info=True)
 
     def refresh(self) -> None:
         self._submit(self._client.refresh())

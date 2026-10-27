@@ -1,4 +1,4 @@
-"""Odamdaki Işık: masaüstü uygulaması (PySide6).
+"""Masaüstü uygulaması (PySide6) giriş noktası.
 
     python light_app.py
 """
@@ -11,12 +11,15 @@ import tempfile
 
 
 def main() -> int:
-    from PySide6.QtCore import QLockFile, Qt
+    from PySide6.QtCore import QLockFile, QSettings, Qt
     from PySide6.QtWidgets import QApplication, QMessageBox
 
     import devices as dv
     import energy
+    import i18n
     import light_core as lc
+    from i18n import tr
+    from version import APP_NAME
     from ui.bridge import LightBridge
     from ui.controller import AppController
     from ui.setup_dialog import SetupDialog
@@ -27,6 +30,7 @@ def main() -> int:
     app = QApplication(sys.argv)
     app.setOrganizationName("TuyaLight")
     app.setApplicationName("RoomLight")
+    i18n.init(str(QSettings().value(i18n.SETTINGS_KEY, i18n.AUTO)))  # dil: kayıtlı tercih ya da sistem dili
     app.setWindowIcon(app_icon())
     app.setQuitOnLastWindowClosed(False)  # kapatınca tepside kalır
     apply_theme(app)
@@ -35,13 +39,13 @@ def main() -> int:
     lock = QLockFile(os.path.join(tempfile.gettempdir(), "tuya_room_light.lock"))
     lock.setStaleLockTime(0)
     if not lock.tryLock(200):
-        QMessageBox.information(None, "Odamdaki Işık", "Uygulama zaten çalışıyor (sistem tepsisine bakın).")
+        QMessageBox.information(None, APP_NAME, tr("app.already_running"))
         return 0
 
     try:
         store = dv.DeviceStore.load(legacy_config=lc.CONFIG_PATH)
     except dv.StoreError as exc:
-        QMessageBox.critical(None, "Odamdaki Işık", f"{exc}\n\nDosyayı silip uygulamayı yeniden açabilirsiniz.")
+        QMessageBox.critical(None, APP_NAME, tr("app.store_error", error=exc))
         return 1
 
     if store.current() is None:  # ilk açılış: sihirbaz
