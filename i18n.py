@@ -12,6 +12,8 @@ sonraki açılışta geçerli olur.
 
 from __future__ import annotations
 
+import re
+
 from locales import en as _en
 from locales import tr as _tr
 
@@ -63,10 +65,12 @@ def set_language(code: str) -> None:
 
 
 def system_language(ui_language: str | None = None) -> str:
-    """Sistem dili Türkçe ise "tr", değilse "en". `ui_language` testler içindir ("tr-TR" gibi)."""
+    """Sistem dilinin kodu, uygulamada varsa ("tr-TR" -> "tr"); yoksa "en". `ui_language` testler içindir."""
     name = ui_language if ui_language is not None else _system_ui_language()
-    name = name.lower()
-    return "tr" if name.startswith(("tr", "turkish")) else "en"
+    prefix = re.split(r"[-_]", name.lower())[0]
+    if prefix == "turkish":  # Windows'ta yerel ad "Turkish_Türkiye" biçiminde gelebilir
+        prefix = "tr"
+    return prefix if prefix in _CATALOGS else "en"
 
 
 def _system_ui_language() -> str:

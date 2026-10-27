@@ -56,6 +56,7 @@ def test_main_window_in_english(qapp, settings):
         assert [b.text() for b in win.preset_buttons] == ["Reading", "Focus", "Night", "Movie", "Romantic", "Ocean"]
         bridge.state.emit(lc.LightState(power=True, mode="white", brightness_pct=70, temp_pct=100))
         assert win.state_label.text() == "On" and "White light" in win.sub_label.text()
+        assert "70%" in win.sub_label.text() and win.bright_value.text() == "70%"
         assert win.temp_value.text() == "Cool"
         bridge.state.emit(lc.LightState(power=False))
         assert win.state_label.text() == "Off"

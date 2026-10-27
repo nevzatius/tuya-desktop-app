@@ -55,7 +55,8 @@ def test_release_notes_explain_install_in_both_languages_and_flag_unverified_fea
     body = read(".github/release_body.md")
     assert "How to install" in body and "Nasıl kurulur" in body
     assert "More info" in body and "Yine de çalıştır" in body and "code-signed" in body and "kod imzalı" in body
-    assert "not yet been verified" in body and "doğrulanmadı" in body
+    flat = re.sub(r"[>*\s]+", " ", body)  # satır sonları ve biçimlendirme işaretlerini yok say
+    assert "not yet been verified" in flat and "doğrulanmadı" in flat
 
 
 def test_start_hidden_only_when_minimized_and_a_tray_exists():

@@ -321,7 +321,7 @@ class MainWindow(QMainWindow):
         lay.addSpacing(4)
 
         # Parlaklık
-        self.bright_value = QLabel("%50")
+        self.bright_value = QLabel(tr("fmt.percent", value=50))
         self.bright_value.setObjectName("value")
         card, box = self._card(tr("main.brightness"), self.bright_value)
         self.bright = GradientSlider(fill=True)
@@ -453,7 +453,7 @@ class MainWindow(QMainWindow):
         self.bridge.set_power(self._state.power is not True)
 
     def _on_bright(self, value: int) -> None:
-        self.bright_value.setText(f"%{value}")
+        self.bright_value.setText(tr("fmt.percent", value=value))
         if not self._syncing:
             self.bridge.set_brightness(value)
 
@@ -531,7 +531,8 @@ class MainWindow(QMainWindow):
         if st.power is True:
             self.state_label.setText(tr("state.on"))
             mode = tr(f"mode.{st.mode}") if st.mode in lc.MODES else ""
-            self.sub_label.setText(f"{mode} · %{self.bright.value()}" if mode else f"%{self.bright.value()}")
+            percent = tr("fmt.percent", value=self.bright.value())
+            self.sub_label.setText(f"{mode} · {percent}" if mode else percent)
         elif st.power is False:
             self.state_label.setText(tr("state.off"))
             self.sub_label.setText(tr("state.tap_to_turn_on"))

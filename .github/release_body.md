@@ -8,8 +8,9 @@
 Prefer no installer? Download the `…-portable-<version>.zip`, extract it anywhere and run the `.exe` inside.
 Verify downloads with `SHA256SUMS.txt`.
 
-> **Status:** Bluetooth connection and the energy tab were tested with a real light. The new setup wizard, the **Blink**
-> button and the **troubleshooter** are covered by automated tests only and have **not yet been verified on a real device**.
+> **Status:** The Bluetooth connection and handshake were tested with a real light (v0.2.0); commands and the UI are covered by
+> automated tests. The new setup wizard, the **Blink** button, the **troubleshooter** and the installer itself have **not yet
+> been verified on a real device**.
 
 ## Nasıl kurulur (Windows)
 
@@ -21,7 +22,7 @@ Verify downloads with `SHA256SUMS.txt`.
 Kurulum istemezseniz `…-portable-<sürüm>.zip` dosyasını istediğiniz yere çıkarıp içindeki `.exe`'yi çalıştırın.
 İndirdiklerinizi `SHA256SUMS.txt` ile doğrulayabilirsiniz.
 
-> **Durum:** Bluetooth bağlantısı ve enerji sekmesi gerçek ışıkla denendi. Yeni kurulum sihirbazı, **Yanıp söndür** düğmesi ve
-> **sorun giderici** yalnızca otomatik testlerle sınandı; **gerçek cihazda henüz doğrulanmadı**.
+> **Durum:** Bluetooth bağlantısı ve el sıkışma gerçek ışıkla denendi (v0.2.0); komutlar ve arayüz otomatik testlerle sınandı.
+> Yeni kurulum sihirbazı, **Yanıp söndür** düğmesi, **sorun giderici** ve yükleyicinin kendisi **gerçek cihazda henüz doğrulanmadı**.
 
 ---

@@ -140,6 +140,7 @@ STRINGS: dict[str, str] = {
     "day.4": "Cum",
     "day.5": "Cmt",
     "day.6": "Paz",
+    "fmt.percent": "%{value}",
     "fmt.hours_minutes": "{hours} sa {minutes} dk",
     "fmt.hours": "{hours} sa",
     "fmt.minutes": "{minutes} dk",

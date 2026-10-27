@@ -29,13 +29,17 @@ def placeholders(text: str) -> set[str]:
 # -- sözlükler ---------------------------------------------------------------------------
 
 
-def test_every_key_exists_in_both_languages():
-    assert set(TR_STRINGS) == set(EN_STRINGS)
+def test_every_key_exists_in_every_language():
+    # Yeni bir dil eklenince (bkz. CONTRIBUTING.md) burada da otomatik sınanır.
+    for code, catalog in i18n._CATALOGS.items():
+        assert set(catalog) == set(EN_STRINGS), (code, set(catalog) ^ set(EN_STRINGS))
+    assert set(i18n.LANGUAGES) == set(i18n._CATALOGS)
 
 
 def test_placeholders_match_between_languages():
-    for key in TR_STRINGS:
-        assert placeholders(TR_STRINGS[key]) == placeholders(EN_STRINGS[key]), key
+    for code, catalog in i18n._CATALOGS.items():
+        for key in EN_STRINGS:
+            assert placeholders(catalog[key]) == placeholders(EN_STRINGS[key]), (code, key)
 
 
 def test_no_empty_strings_and_no_key_placeholders_leak():
