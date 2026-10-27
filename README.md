@@ -73,7 +73,7 @@ An honest summary of what has and has not been tried on real hardware:
 | Automations: **unreachable light** (3 tries, then a tray notification) | Automated tests only — **not yet verified on a real device** |
 | Tray presets and command line (`--scene`, `--power`) | Automated tests, including a two-process command-line check — **not yet verified on a real device** |
 | **Global shortcuts** | Automated tests, including a real Windows `RegisterHotKey` call — **not yet verified on a real device** |
-| Windows installer and portable zip | Build scripts and release workflow written; **not yet built and tried by the maintainer** |
+| Windows installer | Built with Inno Setup and installed over an earlier install on the maintainer's Windows 10 PC (v0.4.0); the app starts and keeps its data. The release workflow and the **portable zip** are **not yet tried** |
 | **English interface** | Automated tests and generated screenshots — **not yet verified** on an English-language Windows |
 | Windows 10/11 | Primary target; the UI has had little wide testing on real Windows installs |
 | macOS / Linux | Expected to work (Qt + bleak), **not tried** |
@@ -147,7 +147,7 @@ TuyaDesktopApp.exe --power off
   | `3` | No valid reply from the app |
   | `64` | Wrong command line |
 
-  **Windows Task Scheduler:** create a task, trigger of your choice, action *Start a program*, program `C:\Program Files\Tuya Desktop App\TuyaDesktopApp.exe`, arguments `--scene "Night"`. **Stream Deck** (or any launcher): add a *System → Open* / *Run* action with the same program and arguments. Both only work while the app is running. They do not start it: use *Start with Windows* in the installer so it is already in the tray.
+  **Windows Task Scheduler:** create a task, trigger of your choice, action *Start a program*, program `%LOCALAPPDATA%\Programs\Tuya Desktop App\TuyaDesktopApp.exe` (the default per-user install folder; `C:\Program Files\Tuya Desktop App` if you installed for all users), arguments `--scene "Night"`. **Stream Deck** (or any launcher): add a *System → Open* / *Run* action with the same program and arguments. Both only work while the app is running. They do not start it: use *Start with Windows* in the installer so it is already in the tray.
 - **Global shortcuts (Windows only):** Open *Presets → Manage…*, pick a preset and press **Shortcut…** (e.g. `Ctrl+Alt+1`). It needs Ctrl, Alt or Win plus a letter, digit or F1-F12, and works everywhere while the app is running. If another app already uses the combination you get an error and the old shortcut is kept. The button is hidden on macOS and Linux.
 
 ## Privacy and security

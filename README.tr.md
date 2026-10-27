@@ -73,7 +73,7 @@ Gerçek cihazla nelerin denendiğinin, nelerin denenmediğinin dürüst özeti:
 | Otomasyonlar: **ulaşılamayan ışık** (3 deneme, sonra tepsi bildirimi) | Yalnızca otomatik testler — **gerçek cihazda henüz doğrulanmadı** |
 | Tepsi hazır ayarları ve komut satırı (`--scene`, `--power`) | Otomatik testler (iki süreçli komut satırı denemesi dahil) — **gerçek cihazda henüz doğrulanmadı** |
 | **Genel kısayol tuşları** | Otomatik testler (gerçek bir Windows `RegisterHotKey` çağrısı dahil) — **gerçek cihazda henüz doğrulanmadı** |
-| Windows yükleyicisi ve taşınabilir zip | Derleme betikleri ve release iş akışı yazıldı; **geliştirici tarafından henüz derlenip denenmedi** |
+| Windows yükleyicisi | Inno Setup ile derlendi ve geliştiricinin Windows 10 bilgisayarında önceki kurulumun üzerine kuruldu (v0.4.0); uygulama açılıyor ve verilerini koruyor. Release iş akışı ve **taşınabilir zip** **henüz denenmedi** |
 | **İngilizce arayüz** | Otomatik testler ve üretilen ekran görüntüleri — İngilizce Windows'ta **henüz doğrulanmadı** |
 | Windows 10/11 | Birincil hedef; arayüz gerçek Windows kurulumlarında henüz geniş denenmedi |
 | macOS / Linux | Çalışması beklenir (Qt + bleak), **denenmedi** |
@@ -147,7 +147,7 @@ TuyaDesktopApp.exe --power off
   | `3` | Uygulamadan geçerli yanıt gelmedi |
   | `64` | Komut satırı hatalı |
 
-  **Windows Görev Zamanlayıcı:** istediğiniz tetikleyiciyle bir görev oluşturun, eylem *Program başlat*, program `C:\Program Files\Tuya Desktop App\TuyaDesktopApp.exe`, bağımsız değişkenler `--scene "Gece"`. **Stream Deck** (ya da başka bir başlatıcı): aynı program ve bağımsız değişkenlerle *Sistem → Aç* / çalıştır eylemi ekleyin. İkisi de yalnızca uygulama çalışırken işe yarar; uygulamayı başlatmazlar: yükleyicideki *Windows ile başlat* seçeneğiyle uygulama baştan tepside dursun.
+  **Windows Görev Zamanlayıcı:** istediğiniz tetikleyiciyle bir görev oluşturun, eylem *Program başlat*, program `%LOCALAPPDATA%\Programs\Tuya Desktop App\TuyaDesktopApp.exe` (kullanıcıya özel varsayılan kurulum klasörü; tüm kullanıcılar için kurduysanız `C:\Program Files\Tuya Desktop App`), bağımsız değişkenler `--scene "Gece"`. **Stream Deck** (ya da başka bir başlatıcı): aynı program ve bağımsız değişkenlerle *Sistem → Aç* / çalıştır eylemi ekleyin. İkisi de yalnızca uygulama çalışırken işe yarar; uygulamayı başlatmazlar: yükleyicideki *Windows ile başlat* seçeneğiyle uygulama baştan tepside dursun.
 - **Genel kısayol tuşları (yalnızca Windows):** *Hazır ayarlar → Yönet…* bölümünde bir ayarı seçip **Kısayol…** düğmesine basın (ör. `Ctrl+Alt+1`). Ctrl, Alt ya da Win ile bir harf, rakam ya da F1-F12 gerekir; uygulama çalışırken her yerde geçerlidir. Başka bir uygulama aynı kombinasyonu kullanıyorsa hata gösterilir ve eski kısayol korunur. macOS ve Linux'ta düğme gizlidir.
 
 ## Gizlilik ve güvenlik
