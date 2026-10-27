@@ -240,4 +240,32 @@ STRINGS: dict[str, str] = {
     "setup.done_title": "You're all set",
     "setup.done_body": "{names} added. The app will now connect to the light over Bluetooth. You won't need these steps again.",
     "setup.done_button": "Open the app",
+    # -- troubleshooter and diagnostics -----------------------------------------------------
+    "common.unverified": "Experimental: this feature has not been verified on a real device yet.",
+    "trouble.title": "Can't reach your light",
+    "trouble.intro": "Check these in order, most likely first:",
+    "trouble.bt_title": "Bluetooth",
+    "trouble.bt_checking": "Checking Bluetooth…",
+    "trouble.bt_ok": "Bluetooth is on and the adapter works.",
+    "trouble.bt_off": "Bluetooth appears to be turned off.",
+    "trouble.bt_off_fix": "Fix: turn Bluetooth on in Windows settings, then press “Try again”.",
+    "trouble.bt_missing": "No Bluetooth adapter found.",
+    "trouble.bt_missing_fix": "Fix: this computer needs Bluetooth (4.0 or newer); a cheap USB Bluetooth adapter works too.",
+    "trouble.bt_unknown": "Could not check Bluetooth; still look at the items below.",
+    "trouble.open_bt": "Open Bluetooth settings",
+    "trouble.recheck": "Check Bluetooth again",
+    "trouble.phone_title": "The Smart Life app on your phone may be connected to the light",
+    "trouble.phone_fix": "A light accepts only one connection at a time. Fully close the Smart Life app or turn off your phone's Bluetooth.",
+    "trouble.far_title": "The light may be too far away or switched off",
+    "trouble.far_fix": "Make sure the light is plugged in and on (including the wall switch) and move it a few meters closer to the computer.",
+    "trouble.other_title": "The app may be open somewhere else",
+    "trouble.other_fix": "Check the system tray; close any other copy of this app or any other program that connects to the light.",
+    "trouble.retry": "Try again",
+    "trouble.copy_report": "Copy diagnostic report",
+    "main.copy_report": "Copy diagnostic report",
+    "main.report_problem": "Report a problem…",
+    "main.report_copied": (
+        "The diagnostic report was copied to the clipboard. Paste it into the GitHub form when you report a problem. "
+        "It contains no local keys, device IDs or addresses; still, have a look before you send it."
+    ),
 }

@@ -516,6 +516,43 @@ def friendly_error(exc: BaseException) -> str:
     return tr("error.unexpected", error=redact(repr(exc)))
 
 
+def error_kind(exc: BaseException) -> str:
+    """Arayüzün çözüm önermesi için hata türü: not_found, auth, handshake, bluetooth, config ya da other."""
+    if isinstance(exc, ConfigError):
+        return "config"
+    if isinstance(exc, LightNotFound):
+        return "not_found"
+    if isinstance(exc, TuyaBleAuthenticationError):
+        return "auth"
+    if isinstance(exc, TuyaBleHandshakeTimeoutError):
+        return "handshake"
+    if isinstance(exc, (TuyaBleError, BleakError, TimeoutError, OSError)):
+        return "bluetooth"
+    return "other"
+
+
+def classify_bluetooth_error(message: str) -> str:
+    """Tarama hatası metninden Bluetooth durumu: "off", "missing" ya da "unknown" (emin değilsek iddia etmeyiz)."""
+    low = message.lower()
+    if any(word in low for word in ("turned off", "is off", "powered off", "disabled", "radio")):
+        return "off"
+    if any(word in low for word in ("no bluetooth", "adapter", "no default", "unsupported", "not supported", "not found")):
+        return "missing"
+    return "unknown"
+
+
+async def check_bluetooth(duration: float = 0.5) -> str:
+    """Bluetooth'u kısa bir taramayla dener: "ok", "off", "missing" ya da "unknown"."""
+    try:
+        async with BleakScanner(detection_callback=lambda *_: None):
+            await asyncio.sleep(duration)
+    except BleakError as exc:
+        return classify_bluetooth_error(str(exc))
+    except Exception:  # noqa: BLE001 - beklenmedik: emin olmadığımız bir şeyi söylemeyiz
+        return "unknown"
+    return "ok"
+
+
 class LightClient:
     """Üst düzey ışık kontrolü: bağlantıyı yönetir, komutları sıraya koyar."""
 

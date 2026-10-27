@@ -14,7 +14,7 @@ import re
 from collections.abc import Callable
 from typing import Any
 
-from PySide6.QtCore import QLocale, QRectF, Qt, QThread, QUrl, Signal
+from PySide6.QtCore import QLocale, QRectF, Qt, QUrl, Signal
 from PySide6.QtGui import QColor, QDesktopServices, QPainter
 from PySide6.QtWidgets import (
     QApplication,
@@ -39,6 +39,7 @@ from i18n import tr
 
 from .icons import app_icon
 from .theme import BORDER, DANGER, OK
+from .workers import Worker as _Worker
 
 TUYA_URL = "https://iot.tuya.com"
 PAGE_WELCOME, PAGE_ACCOUNT, PAGE_CREDENTIALS, PAGE_LIGHTS, PAGE_MANUAL, PAGE_DONE = range(6)
@@ -47,8 +48,6 @@ ID_PATTERN = re.compile(r"[A-Za-z0-9]{20}")
 SECRET_PATTERN = re.compile(r"[A-Za-z0-9]{32}")
 SCAN_SECONDS = 6.0
 ACCENT = "#8fb4ff"
-
-_LIVE_WORKERS: set[QThread] = set()  # iş parçacıkları pencere kapansa da bitene kadar yaşar
 
 
 def default_scanner() -> list:
@@ -68,28 +67,6 @@ def signal_text(rssi: int | None) -> str:
     if rssi >= -60:
         return tr("setup.signal_strong")
     return tr("setup.signal_good") if rssi >= -75 else tr("setup.signal_weak")
-
-
-class _Worker(QThread):
-    """`func(*args)`'ı arka planda çalıştırır; sonuç `done`, hata `failed(mesaj, tür)` ile gelir."""
-
-    done = Signal(object)
-    failed = Signal(str, str)
-
-    def __init__(self, func: Callable, args: tuple, explain: Callable[[Exception], tuple[str, str]]) -> None:
-        super().__init__()
-        self._func, self._args, self._explain = func, args, explain
-        _LIVE_WORKERS.add(self)
-        self.finished.connect(lambda: _LIVE_WORKERS.discard(self))
-
-    def run(self) -> None:
-        try:
-            result = self._func(*self._args)
-        except Exception as exc:  # noqa: BLE001
-            message, kind = self._explain(exc)
-            self.failed.emit(message, kind)
-        else:
-            self.done.emit(result)
 
 
 def _explain_cloud(exc: Exception) -> tuple[str, str]:
@@ -154,6 +131,7 @@ class DeviceRow(QFrame):
         self.blink_button = QPushButton(tr("setup.blink"))
         self.blink_button.setObjectName("ghost")
         self.blink_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.blink_button.setToolTip(tr("common.unverified"))
         self.blink_button.setVisible(device.is_light and not known)
         self.blink_button.clicked.connect(lambda: self.blinkRequested.emit(self))
         name_row = QHBoxLayout()
@@ -567,7 +545,7 @@ class SetupDialog(QDialog):
         page, lay = self._page()
         lay.addWidget(self._title(tr("setup.lights_title")))
         lay.addWidget(self._text(tr("setup.lights_hint")))
-        lay.addWidget(self._text(tr("setup.blink_hint"), "muted"))
+        lay.addWidget(self._text(f"{tr('setup.blink_hint')} {tr('common.unverified')}", "muted"))
         self.rows_holder = QWidget()
         self.rows_layout = QVBoxLayout(self.rows_holder)
         self.rows_layout.setContentsMargins(0, 0, 6, 0)

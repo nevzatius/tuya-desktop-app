@@ -30,7 +30,8 @@ Factory = Callable[[], Awaitable[None]]
 class LightBridge(QObject):
     state = Signal(object)  # light_core.LightState
     status = Signal(str)  # "Bağlı", "Işık aranıyor…" ...
-    error = Signal(str)  # kullanıcıya gösterilecek Türkçe hata
+    error = Signal(str)  # kullanıcıya gösterilecek (çevrilmiş) hata
+    problem = Signal(str)  # hatanın türü (light_core.error_kind): arayüz buna göre çözüm önerir; `error`dan sonra gelir
     log = Signal(str)
     connectedChanged = Signal(bool)
 
@@ -114,6 +115,7 @@ class LightBridge(QObject):
         if isinstance(exc, TuyaBleAuthenticationError):
             self._fatal = True
         self.error.emit(lc.friendly_error(exc))
+        self.problem.emit(lc.error_kind(exc))
         self._set_connected(bool(self._client.connected))
 
     async def _guard(self, coro: Awaitable[None]) -> None:
@@ -163,8 +165,10 @@ class LightBridge(QObject):
                 except TuyaBleAuthenticationError as exc:
                     self._fatal = True
                     self.error.emit(lc.friendly_error(exc))
+                    self.problem.emit(lc.error_kind(exc))
                 except Exception as exc:  # noqa: BLE001
                     self.error.emit(lc.friendly_error(exc))
+                    self.problem.emit(lc.error_kind(exc))
                     delay = min(delay * 1.6, 45.0)
             await asyncio.sleep(delay)
 

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import QSettings, Qt, Signal
-from PySide6.QtGui import QActionGroup, QColor, QIcon, QKeySequence, QPainter, QPixmap, QShortcut
+from PySide6.QtCore import QSettings, Qt, QUrl, Signal
+from PySide6.QtGui import QActionGroup, QColor, QDesktopServices, QIcon, QKeySequence, QPainter, QPixmap, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
     QButtonGroup,
@@ -24,19 +24,34 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+import asyncio
+
+import diagnostics as diag
 import i18n
 import light_core as lc
 from i18n import tr
-from version import APP_NAME
+from version import APP_NAME, APP_URL
 
 from .energy_page import EnergyPage
 from .colors import COOL, NEUTRAL, WARM, accent_for, hex_of, hs_rgb, shade
 from .icons import app_icon
 from .presets import PRESETS, Preset
 from .tray import TrayController
+from .trouble import BLUETOOTH_SETTINGS_URL, TroubleshootCard
 from .widgets import ColorWheel, GradientSlider, PowerButton, StatusPill
+from .workers import Worker
 
 PAGE_WHITE, PAGE_COLOUR = 0, 1
+ISSUES_URL = f"{APP_URL}/issues/new/choose"
+
+
+def default_bluetooth_check() -> str:
+    """Bluetooth'u kısa bir taramayla dener (arka plan iş parçacığında çağrılır)."""
+    return asyncio.run(lc.check_bluetooth())
+
+
+def default_open_url(url: str) -> None:
+    QDesktopServices.openUrl(QUrl(url))
 
 
 def _dot_icon(rgb: tuple[int, int, int], size: int = 16) -> QIcon:
@@ -76,6 +91,13 @@ class MainWindow(QMainWindow):
         self._tray: TrayController | None = None
         self._tray_hint_shown = False
         self._energy_log = energy_log
+        self.events = diag.RecentEvents()  # tanılama raporu için son hatalar ve günlük satırları
+        self._devices_list: list[lc.Config] = [cfg]
+        self._connected: bool | None = None
+        self._bt_state = ""
+        self._bt_worker: Worker | None = None
+        self.bluetooth_check = default_bluetooth_check  # testlerde değiştirilebilir
+        self.open_url = default_open_url
 
         self.setWindowTitle(cfg.name)
         self.setWindowIcon(app_icon())
@@ -109,6 +131,9 @@ class MainWindow(QMainWindow):
             action.triggered.connect(lambda _=False, c=code: self._on_language(c))
             group.addAction(action)
             self.language_actions[code] = action
+        self.settings_menu.addSeparator()
+        self.copy_report_action = self.settings_menu.addAction(tr("main.copy_report"), lambda: self.copy_report())
+        self.report_problem_action = self.settings_menu.addAction(tr("main.report_problem"), lambda: self.open_url(ISSUES_URL))
 
     def _on_language(self, code: str) -> None:
         """Seçimi kaydeder; arayüz çalışırken yeniden çevrilmez, yeni dil bir sonraki açılışta geçerli olur."""
@@ -122,6 +147,7 @@ class MainWindow(QMainWindow):
 
     def set_devices(self, devices: list[lc.Config], selected: str) -> None:
         """Başlıktaki ışık seçici menüsünü yeniler."""
+        self._devices_list = list(devices)
         self.device_menu.clear()
         self._device_actions = {}
         for dev in devices:
@@ -167,6 +193,7 @@ class MainWindow(QMainWindow):
         if self._tray is not None:
             self._tray.set_title(cfg.name)
         self.banner.hide()
+        self.trouble.hide()
         self._state = lc.LightState()
         self._apply_state(self._state)
         self._on_status(tr("status.connecting"))
@@ -226,6 +253,13 @@ class MainWindow(QMainWindow):
         self.banner.setWordWrap(True)
         self.banner.hide()
         top_lay.addWidget(self.banner)
+        self.trouble = TroubleshootCard()  # "ışık bulunamadı" için sorun giderici
+        self.trouble.hide()
+        self.trouble.retryRequested.connect(self._retry)
+        self.trouble.recheckRequested.connect(self._check_bluetooth)
+        self.trouble.copyReportRequested.connect(self.copy_report)
+        self.trouble.openBluetoothSettings.connect(lambda: self.open_url(BLUETOOTH_SETTINGS_URL))
+        top_lay.addWidget(self.trouble)
 
         tabs_wrap = QFrame()
         tabs_wrap.setObjectName("segWrap")
@@ -406,6 +440,9 @@ class MainWindow(QMainWindow):
         self.bridge.state.connect(self._apply_state)
         self.bridge.status.connect(self._on_status)
         self.bridge.error.connect(self._on_error)
+        problem = getattr(self.bridge, "problem", None)
+        if problem is not None:
+            problem.connect(self._on_problem)
         self.bridge.log.connect(self._on_log)
         self.bridge.connectedChanged.connect(self._on_connected)
         QShortcut(QKeySequence("Ctrl+Q"), self, activated=self.quit_app)
@@ -512,16 +549,69 @@ class MainWindow(QMainWindow):
         self._set_pill(text, tone)
 
     def _on_connected(self, ok: bool) -> None:
+        self._connected = ok
         if ok:
             self.banner.hide()
+            self.trouble.hide()
 
     def _on_error(self, text: str) -> None:
         self.banner.setText(text)
         self.banner.show()
+        self.events.add_error(text)
         self._on_log("ERROR: " + text)
 
     def _on_log(self, text: str) -> None:
+        self.events.add_log(text)
         self.log_view.appendPlainText(text)
+
+    # --------------------------------------------------- sorun giderici ve rapor
+
+    def _on_problem(self, kind: str) -> None:
+        """Hata türüne göre çözüm: "ışık bulunamadı" için kart, diğerleri için yalnızca bant."""
+        self.events.add_error(f"kind={kind}")
+        if kind != "not_found":
+            self.trouble.hide()
+            return
+        self.banner.hide()  # kart aynı bilgiyi (ve daha fazlasını) veriyor
+        if self.trouble.isHidden():
+            self.trouble.show()
+            self._check_bluetooth()
+
+    def _check_bluetooth(self) -> None:
+        if self._bt_worker is not None:
+            return
+        self.trouble.set_bluetooth_state("checking")
+        worker = Worker(self.bluetooth_check, (), lambda exc: ("unknown", "other"))
+        worker.done.connect(self._bluetooth_checked)
+        worker.failed.connect(lambda *_: self._bluetooth_checked("unknown"))
+        worker.finished.connect(self._bluetooth_worker_finished)
+        self._bt_worker = worker
+        worker.start()
+
+    def _bluetooth_worker_finished(self) -> None:
+        self._bt_worker = None
+
+    def _bluetooth_checked(self, state: object) -> None:
+        self._bt_state = str(state)
+        self.trouble.set_bluetooth_state(self._bt_state)
+
+    def _retry(self) -> None:
+        self.bridge.reconnect()
+        self._check_bluetooth()
+
+    def build_report(self) -> str:
+        return diag.build_report(
+            self._devices_list,
+            self.events,
+            language=i18n.language(),
+            language_setting=str(self._settings.value(i18n.SETTINGS_KEY, i18n.AUTO)),
+            connected=self._connected,
+            bluetooth=self._bt_state,
+        )
+
+    def copy_report(self) -> None:
+        QApplication.clipboard().setText(self.build_report())
+        self.show_info(tr("main.report_copied"))
 
     # ----------------------------------------------------- tepsi ve kapanış
 

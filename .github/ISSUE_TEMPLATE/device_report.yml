@@ -1,0 +1,42 @@
+name: Device report / Cihaz raporu
+description: Tell us whether your light works (or not)
+labels: [device-report]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Reports help us fill the "supported devices" table. **Do not paste keys, IDs or addresses.**
+  - type: input
+    id: model
+    attributes:
+      label: Light model / Işık modeli
+      placeholder: "e.g. brand and model name on the box"
+    validations:
+      required: true
+  - type: input
+    id: category
+    attributes:
+      label: Tuya category / Tuya kategorisi
+      description: Shown in the diagnostic report (e.g. dj). / Tanılama raporunda görünür (ör. dj).
+  - type: dropdown
+    id: result
+    attributes:
+      label: Result / Sonuç
+      options:
+        - Everything works / Her şey çalışıyor
+        - Connects, some controls do not work / Bağlanıyor, bazı kontroller çalışmıyor
+        - Cannot connect / Bağlanamıyor
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes / Notlar
+  - type: textarea
+    id: report
+    attributes:
+      label: Diagnostic report / Tanılama raporu
+      description: ⚙ (Settings) → Copy diagnostic report / ⚙ (Ayarlar) → Tanılama raporunu kopyala
+      render: markdown
+    validations:
+      required: true

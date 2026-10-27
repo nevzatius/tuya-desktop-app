@@ -240,4 +240,32 @@ STRINGS: dict[str, str] = {
     "setup.done_title": "Hazırsın",
     "setup.done_body": "{names} eklendi. Uygulama şimdi Bluetooth ile ışığa bağlanacak. Bir daha bu adımlara gerek yok.",
     "setup.done_button": "Uygulamayı aç",
+    # -- sorun giderici ve tanılama -------------------------------------------------------
+    "common.unverified": "Deneysel: bu özellik gerçek cihazda henüz doğrulanmadı.",
+    "trouble.title": "Işığına ulaşılamadı",
+    "trouble.intro": "Sırayla şunlara bak (en olası olandan başlayarak):",
+    "trouble.bt_title": "Bluetooth",
+    "trouble.bt_checking": "Bluetooth denetleniyor…",
+    "trouble.bt_ok": "Bluetooth açık ve adaptör çalışıyor.",
+    "trouble.bt_off": "Bluetooth kapalı görünüyor.",
+    "trouble.bt_off_fix": "Çözüm: Windows ayarlarından Bluetooth'u aç, sonra “Tekrar dene”ye bas.",
+    "trouble.bt_missing": "Bluetooth adaptörü bulunamadı.",
+    "trouble.bt_missing_fix": "Çözüm: bilgisayarında Bluetooth (4.0 ya da üstü) olmalı; yoksa ucuz bir USB Bluetooth adaptörü takabilirsin.",
+    "trouble.bt_unknown": "Bluetooth denetlenemedi; yine de aşağıdakilere bak.",
+    "trouble.open_bt": "Bluetooth ayarlarını aç",
+    "trouble.recheck": "Bluetooth'u yeniden denetle",
+    "trouble.phone_title": "Telefondaki Smart Life ışığa bağlı olabilir",
+    "trouble.phone_fix": "Işığa aynı anda tek cihaz bağlanabilir. Smart Life uygulamasını tamamen kapat ya da telefonun Bluetooth'unu kapat.",
+    "trouble.far_title": "Işık uzakta ya da kapalı olabilir",
+    "trouble.far_fix": "Işığın prizde ve açık olduğundan emin ol (duvar anahtarı dahil) ve bilgisayara birkaç metre yaklaştır.",
+    "trouble.other_title": "Uygulama başka bir yerde açık olabilir",
+    "trouble.other_fix": "Sistem tepsisine bak; uygulamanın başka bir kopyasını ya da ışığa bağlanan başka bir programı kapat.",
+    "trouble.retry": "Tekrar dene",
+    "trouble.copy_report": "Tanılama raporunu kopyala",
+    "main.copy_report": "Tanılama raporunu kopyala",
+    "main.report_problem": "Sorun bildir…",
+    "main.report_copied": (
+        "Tanılama raporu panoya kopyalandı. Sorun bildirirken GitHub'daki forma yapıştırın. "
+        "Yerel anahtar, cihaz kimliği ve adres içermez; yine de göndermeden önce göz atın."
+    ),
 }

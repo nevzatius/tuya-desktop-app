@@ -194,6 +194,7 @@ class FakeBridge(QObject):
     state = Signal(object)
     status = Signal(str)
     error = Signal(str)
+    problem = Signal(str)
     log = Signal(str)
     connectedChanged = Signal(bool)
 
