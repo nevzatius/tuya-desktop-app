@@ -295,4 +295,11 @@ STRINGS: dict[str, str] = {
     "presets.error_values": "Ayar değerleri geçersiz.",
     "presets.error_write": "Dosyaya yazılamadı: {error}",
     "presets.recovered": "Hazır ayarlar dosyası okunamadı ya da bozuktu. Yedeği alındı, yerleşik ayarlarla devam ediliyor.",
+    # -- otomasyon (motor) -----------------------------------------------------------------
+    "automation.failed": "“{rule}” otomasyonu çalışamadı ({light}): {reason}",
+    "automation.reason_unreachable": "ışığa ulaşılamadı (3 deneme yapıldı)",
+    "automation.reason_unknown_light": "ışık artık kayıtlı değil",
+    "automation.reason_preset_missing": "kullanılan hazır ayar silinmiş",
+    "automation.reason_other": "beklenmeyen bir hata oluştu",
+    "automation.recovered": "Otomasyon dosyası okunamadı ya da bazı kurallar bozuktu. Yedeği alındı; geçerli kurallarla devam ediliyor.",
 }

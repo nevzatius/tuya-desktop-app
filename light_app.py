@@ -19,12 +19,14 @@ def main() -> int:
     from PySide6.QtCore import QLockFile, QSettings, Qt
     from PySide6.QtWidgets import QApplication, QMessageBox
 
+    import automation as au
     import devices as dv
     import energy
     import i18n
     import light_core as lc
     from i18n import tr
     from version import APP_NAME
+    from ui.automation_host import AutomationHost, LightBackend
     from ui.bridge import LightBridge
     from ui.controller import AppController
     from ui.setup_dialog import SetupDialog
@@ -74,12 +76,20 @@ def main() -> int:
     window = MainWindow(cfg, bridge, energy_log=energy_log, preset_store=presets)
     tracker = energy.UsageTracker(energy_log) if energy_log is not None else None
     AppController(store, bridge, window, tracker=tracker)
+    rules = au.RuleStore.load()  # bozuksa yedeği alınır, boş başlanır
+    host = AutomationHost(
+        rules, au.EngineState.load(), LightBackend(store, bridge), resolve_preset=presets.get, notify=window.notice
+    )
     if not start_hidden(sys.argv, window.has_tray):
         window.show()
     if presets.problem:
         window.notice(tr("presets.recovered"))
+    if rules.problem:
+        window.notice(tr("automation.recovered"))
     bridge.start()
+    host.start()
     code = app.exec()
+    host.shutdown()
     bridge.shutdown()
     if energy_log is not None:
         energy_log.close()  # açık aralıkları kapatır

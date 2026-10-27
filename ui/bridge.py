@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import logging
 import threading
 from collections.abc import Awaitable, Callable
@@ -194,6 +195,18 @@ class LightBridge(QObject):
         else:
             dps = lc.cmd_power(cfg, True) + lc.cmd_colour(cfg, preset.hue, preset.sat, lc.pct_to_bright(preset.bright))
         self._latest("light", lambda: self._client.send(dps))
+
+    def execute(self, operation: Callable[[Any], Awaitable[Any]]) -> concurrent.futures.Future:
+        """`operation(istemci)`'yi BLE iş parçacığında, seçili ışığın istemcisiyle çalıştırır (otomasyonlar için).
+
+        Sonuç ya da hata çağırana döner; arayüze hata bandı/sinyal göndermez (çağıran yeniden dener ya da bildirir).
+        Komut normal yoldan gittiği için enerji kaydı ve ekran durumu da güncellenir.
+        """
+
+        async def run() -> Any:
+            return await operation(self._client)
+
+        return asyncio.run_coroutine_threadsafe(run(), self._loop)
 
     def set_device(self, cfg: lc.Config) -> None:
         """Başka bir ışığa geç: eski bağlantıyı kapat, bekleyen komutları at, yenisine bağlan."""

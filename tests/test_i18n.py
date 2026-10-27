@@ -55,7 +55,7 @@ def test_english_texts_have_no_turkish_letters():
 
 
 def _source_files() -> list[Path]:
-    files = [ROOT / name for name in ("light_core.py", "cloud_import.py", "devices.py", "energy.py", "light_app.py")]
+    files = [ROOT / name for name in ("light_core.py", "cloud_import.py", "devices.py", "energy.py", "light_app.py", "automation.py", "storage.py", "sun.py")]
     files += sorted((ROOT / "ui").glob("*.py"))
     return files
 

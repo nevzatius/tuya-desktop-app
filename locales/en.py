@@ -295,4 +295,11 @@ STRINGS: dict[str, str] = {
     "presets.error_values": "The preset values are not valid.",
     "presets.error_write": "Could not write the file: {error}",
     "presets.recovered": "The presets file was unreadable or damaged. A backup was kept and the built-in presets are used.",
+    # -- automations (engine) ------------------------------------------------------------
+    "automation.failed": "Automation “{rule}” could not run ({light}): {reason}",
+    "automation.reason_unreachable": "the light could not be reached (3 attempts)",
+    "automation.reason_unknown_light": "the light is no longer saved",
+    "automation.reason_preset_missing": "the preset it uses was deleted",
+    "automation.reason_other": "an unexpected error occurred",
+    "automation.recovered": "The automations file was unreadable or some rules were damaged. A backup was kept; continuing with the valid rules.",
 }
