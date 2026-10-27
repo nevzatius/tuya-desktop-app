@@ -135,7 +135,7 @@ def test_the_file_holds_no_secrets(tmp_path):
     store.add("Lamba", "white", 50)
     text = path.read_text(encoding="utf-8")
     data = json.loads(text)
-    assert set(data) == {"version", "hidden", "presets"}
+    assert set(data) == {"version", "hidden", "hotkeys", "presets"}
     for forbidden in ("local_key", "device_id", "uuid", "address", "secret"):
         assert forbidden not in text
 

@@ -418,4 +418,35 @@ STRINGS: dict[str, str] = {
     "automation.error_rule": "The automation is not valid.",
     "automation.error_tolerance": "The tolerance is not valid.",
     "automation.error_write": "Could not write the file: {error}",
+    # -- quick access: tray, global shortcuts, command line -----------------------------------------
+    "tray.automation_resume": "Resume automations",
+    "presets.hotkey": "Shortcut…",
+    "presets.hotkey_title": "Global shortcut",
+    "presets.hotkey_label": "Key combination for “{name}”",
+    "presets.hotkey_hint": "Pick Ctrl, Alt or Win with a letter, digit or F1-F12 key (e.g. Ctrl+Alt+1). It works everywhere while the app is running. It cannot be saved if another app already uses the combination.",
+    "presets.hotkey_clear": "Remove",
+    "presets.error_hotkey_invalid": "This key is not supported. Use a letter, digit or F1-F12.",
+    "presets.error_hotkey_needs_modifier": "The combination must include Ctrl, Alt or Win.",
+    "presets.error_hotkey_duplicate": "This combination is already used by another preset.",
+    "presets.error_hotkey_conflict": "Another app uses this combination. Try a different one.",
+    "presets.error_hotkey_failed": "The shortcut could not be registered.",
+    "presets.hotkey_startup_failed": "The shortcuts of these presets could not be registered (another app may be using them): {names}",
+    "cli.not_running": "{app} is not running. Start the app first (it may be in the system tray), then try the command again.",
+    "cli.done_scene": "The preset “{name}” was sent to the app.",
+    "cli.done_power_on": "The turn-on command was sent to the app.",
+    "cli.done_power_off": "The turn-off command was sent to the app.",
+    "cli.unknown_scene": "There is no preset named “{name}”. Available presets: {names}",
+    "cli.no_light": "The app has no saved light.",
+    "cli.rejected": "The app did not accept the command.",
+    "cli.no_reply": "No valid reply was received from the app.",
+    "cli.usage_both": "--scene and --power cannot be used together.",
+    "cli.usage_missing": "Missing argument: give a preset name for --scene, or on / off for --power.",
+    "cli.usage_power_value": "--power only accepts on or off.",
+    "cli.usage_empty_scene": "The preset name cannot be empty.",
+    "cli.help": (
+        "Usage:\n"
+        "  {program} --scene \"Movie\"    applies a preset in the running app\n"
+        "  {program} --power on|off     turns the light on or off\n"
+        "Exit codes: 0 sent · 1 rejected · 2 app not running · 3 no reply · 64 wrong usage"
+    ),
 }

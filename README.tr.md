@@ -89,6 +89,33 @@ Işıklar güç ölçmez. Uygulama şunu tahmin eder: *anma gücü (W) × parlak
 - Türkçe arayüz: varsayılan fiyat EPDK mesken tarifesidir (Nisan 2026) ve para birimi liradır; kendi faturanıza bakın, tarifeler değişir. İngilizce arayüz: fiyat **boş** başlar ve para birimini siz seçersiniz (varsayılan sistem bölgenize uyar).
 - Kayıtlar yerel olarak, anahtarlarınızın yanındaki `energy.db` dosyasında tutulur.
 
+## Hızlı erişim: tepsi, komut satırı ve kısayollar
+
+> **Gerçek cihazda henüz doğrulanmadı.** Bu özellikler otomatik testlerle denenmiştir (gerçek bir Windows `RegisterHotKey` çağrısı ve iki süreçli komut satırı denemesi dahil), ancak geliştirici bunları gerçek ışıkla denememiştir.
+
+- **Tepsi menüsü:** tepsi simgesine sağ tıklayın: **Hazır ayarlar** alt menüsü (yerleşik ve kendi ayarlarınız) ve **Otomasyonları duraklat / Otomasyonlara devam et**.
+- **Komut satırı** (uygulama zaten çalışıyor olmalı, tepside durabilir):
+
+```
+TuyaDesktopApp.exe --scene "Film"
+TuyaDesktopApp.exe --scene movie
+TuyaDesktopApp.exe --power on
+TuyaDesktopApp.exe --power off
+```
+
+  `--scene` bir hazır ayarın adını (büyük/küçük harf fark etmez) ya da anahtarını alır (`reading`, `focus`, `night`, `movie`, `romantic`, `ocean`; kendi ayarlarınız adıyla). Komut, yalnızca sizin Windows kullanıcınızın açabildiği yerel bir kanaldan çalışan uygulamaya verilir; uygulama da onu Bluetooth ile ışığa gönderir. Kaynaktan çalıştırırken: `python light_app.py --scene "Film"`.
+
+  | Çıkış kodu | Anlamı |
+  |---|---|
+  | `0` | Komut uygulamaya iletildi |
+  | `1` | Uygulama reddetti (ör. o adda hazır ayar yok; mesaj mevcut ayarları sıralar) |
+  | `2` | Uygulama çalışmıyor |
+  | `3` | Uygulamadan geçerli yanıt gelmedi |
+  | `64` | Komut satırı hatalı |
+
+  **Windows Görev Zamanlayıcı:** istediğiniz tetikleyiciyle bir görev oluşturun, eylem *Program başlat*, program `C:\Program Files\Tuya Desktop App\TuyaDesktopApp.exe`, bağımsız değişkenler `--scene "Gece"`. **Stream Deck** (ya da başka bir başlatıcı): aynı program ve bağımsız değişkenlerle *Sistem → Aç* / çalıştır eylemi ekleyin. İkisi de yalnızca uygulama çalışırken işe yarar; uygulamayı başlatmazlar: yükleyicideki *Windows ile başlat* seçeneğiyle uygulama baştan tepside dursun.
+- **Genel kısayol tuşları (yalnızca Windows):** *Hazır ayarlar → Yönet…* bölümünde bir ayarı seçip **Kısayol…** düğmesine basın (ör. `Ctrl+Alt+1`). Ctrl, Alt ya da Win ile bir harf, rakam ya da F1-F12 gerekir; uygulama çalışırken her yerde geçerlidir. Başka bir uygulama aynı kombinasyonu kullanıyorsa hata gösterilir ve eski kısayol korunur. macOS ve Linux'ta düğme gizlidir.
+
 ## Gizlilik ve güvenlik
 
 - Işıklarınızın yerel anahtarları **yalnızca bu bilgisayarda** saklanır: Windows'ta `%APPDATA%\TuyaDesktopApp\devices.json` (macOS: `~/Library/Application Support/TuyaDesktopApp`, Linux: `~/.config/TuyaDesktopApp`). Dosya şifrelenmez (Linux/macOS'ta yalnızca kullanıcınız okuyabilir). **Paylaşmayın, depoya yüklemeyin.**

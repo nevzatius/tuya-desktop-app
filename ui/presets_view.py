@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap
+from PySide6.QtGui import QColor, QIcon, QKeySequence, QPainter, QPixmap
 from PySide6.QtWidgets import (
     QDialog,
     QFrame,
@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QListWidget,
+    QKeySequenceEdit,
     QListWidgetItem,
     QMenu,
     QMessageBox,
@@ -50,6 +51,11 @@ def dot_icon(rgb: tuple[int, int, int], size: int = 16) -> QIcon:
 
 def error_text(error: PresetError) -> str:
     return tr(f"presets.error_{error.code}", max=MAX_NAME if error.code == "too_long" else MAX_USER_PRESETS)
+
+
+def key_sequence_text(sequence: QKeySequence) -> str:
+    """QKeySequenceEdit sonucu -> "Ctrl+Alt+F" (boşsa "")."""
+    return sequence.toString(QKeySequence.SequenceFormat.PortableText)
 
 
 class PresetDialog(QDialog):
@@ -133,10 +139,17 @@ class ManagePresetsDialog(QDialog):
         self.edit_button = QPushButton(tr("presets.edit"))
         self.delete_button = QPushButton(tr("presets.delete"))
         self.hide_button = QPushButton(tr("presets.hide"))
-        for button, slot in ((self.edit_button, self._edit), (self.delete_button, self._delete), (self.hide_button, self._toggle)):
+        self.hotkey_button = QPushButton(tr("presets.hotkey"))
+        for button, slot in (
+            (self.edit_button, self._edit),
+            (self.delete_button, self._delete),
+            (self.hide_button, self._toggle),
+            (self.hotkey_button, self._hotkey),
+        ):
             button.setObjectName("ghost")
             button.clicked.connect(slot)
             row.addWidget(button)
+        self.hotkey_button.setVisible(section.hotkeys_available())  # yalnızca Windows'ta
         row.addStretch()
         close = QPushButton(tr("presets.close"))
         close.setObjectName("primary")
@@ -159,6 +172,8 @@ class ManagePresetsDialog(QDialog):
                 tags.append(tr("presets.builtin_tag"))
             if store.is_hidden(preset.key):
                 tags.append(tr("presets.hidden_tag"))
+            if store.hotkey_of(preset.key):
+                tags.append(store.hotkey_of(preset.key))
             text = f"{preset.name}   ·   {', '.join(tags)}" if tags else preset.name
             item = QListWidgetItem(dot_icon(preset.swatch()), text)
             item.setData(Qt.ItemDataRole.UserRole, preset.key)
@@ -173,6 +188,7 @@ class ManagePresetsDialog(QDialog):
         self.edit_button.setEnabled(preset is not None and not preset.builtin)
         self.delete_button.setEnabled(preset is not None and not preset.builtin)
         self.hide_button.setEnabled(preset is not None and preset.builtin)
+        self.hotkey_button.setEnabled(preset is not None)
         hidden = preset is not None and self.section.store.is_hidden(preset.key)
         self.hide_button.setText(tr("presets.show") if hidden else tr("presets.hide"))
 
@@ -192,6 +208,12 @@ class ManagePresetsDialog(QDialog):
             self.section.toggle_hidden(key)
             self.refresh(key)
 
+    def _hotkey(self) -> None:
+        key = self.selected_key()
+        if key:
+            self.section.edit_hotkey(key)
+            self.refresh(key)
+
 
 class PresetsSection(QWidget):
     """"Hazır ayarlar" bölümü: başlık, çipler (çoksa kaydırılır), "Şu anki durumu kaydet" ve "Yönet"."""
@@ -204,10 +226,12 @@ class PresetsSection(QWidget):
         store: PresetStore,
         current_scene: Callable[[], dict],
         confirm: Callable[[QWidget, str], bool] | None = None,
+        hotkeys=None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
         self.store = store
+        self._hotkeys = hotkeys  # HotkeyManager ya da None
         self._current_scene = current_scene
         self._confirm = confirm or self._default_confirm
         self.buttons: list[QPushButton] = []
@@ -356,3 +380,90 @@ class PresetsSection(QWidget):
 
     def manage(self) -> None:
         ManagePresetsDialog(self, self.window()).exec()
+
+    # -- genel kısayollar -----------------------------------------------------------------
+
+    def hotkeys_available(self) -> bool:
+        return self._hotkeys is not None and bool(self._hotkeys.available)
+
+    def set_hotkey(self, key: str, combo: str) -> str | None:
+        """Kısayolu atar ve kaydeder; başarısızsa kullanıcıya gösterilecek hata metni (eski kısayol korunur)."""
+        old = self.store.hotkey_of(key)
+        try:
+            self.store.set_hotkey(key, combo)
+        except PresetError as exc:
+            return error_text(exc)
+        except OSError as exc:
+            return tr("presets.error_write", error=exc)
+        errors = self._hotkeys.apply(self.store.hotkeys()) if self.hotkeys_available() else {}
+        if key in errors:  # başka bir uygulama kullanıyor: eskisine dön
+            try:
+                self.store.set_hotkey(key, old)
+            except (PresetError, OSError):
+                pass
+            self._hotkeys.apply(self.store.hotkeys())
+            return tr(f"presets.error_hotkey_{errors[key]}")
+        self.changed.emit()
+        return None
+
+    def edit_hotkey(self, key: str) -> bool:
+        preset = self.store.get(key)
+        if preset is None or not self.hotkeys_available():
+            return False
+        dialog = HotkeyDialog(preset.name, self.store.hotkey_of(key), lambda combo: self.set_hotkey(key, combo), self.window())
+        return dialog.exec() == QDialog.DialogCode.Accepted
+
+
+class HotkeyDialog(QDialog):
+    """Bir hazır ayar için genel kısayol seçtirir. Kaydetmeyi `apply(kombinasyon)` yapar; hata dönerse pencere açık kalır."""
+
+    def __init__(self, preset_name: str, current: str, apply: Callable[[str], str | None], parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._apply = apply
+        self.setWindowTitle(tr("presets.hotkey_title"))
+        self.setMinimumWidth(380)
+        box = QVBoxLayout(self)
+        box.setContentsMargins(20, 18, 20, 18)
+        box.setSpacing(10)
+        label = QLabel(tr("presets.hotkey_label", name=preset_name))
+        label.setWordWrap(True)
+        box.addWidget(label)
+        self.edit = QKeySequenceEdit(QKeySequence(current))
+        self.edit.setMaximumSequenceLength(1)
+        box.addWidget(self.edit)
+        hint = QLabel(tr("presets.hotkey_hint"))
+        hint.setObjectName("note")
+        hint.setWordWrap(True)
+        box.addWidget(hint)
+        self.error = QLabel()
+        self.error.setObjectName("banner")
+        self.error.setWordWrap(True)
+        self.error.hide()
+        box.addWidget(self.error)
+        row = QHBoxLayout()
+        clear = QPushButton(tr("presets.hotkey_clear"))
+        clear.setObjectName("ghost")
+        clear.clicked.connect(self.edit.clear)
+        cancel = QPushButton(tr("controller.cancel"))
+        cancel.setObjectName("ghost")
+        cancel.clicked.connect(self.reject)
+        self.save_button = QPushButton(tr("presets.save"))
+        self.save_button.setObjectName("primary")
+        self.save_button.setDefault(True)
+        self.save_button.clicked.connect(self.accept)
+        row.addWidget(clear)
+        row.addStretch()
+        row.addWidget(cancel)
+        row.addWidget(self.save_button)
+        box.addLayout(row)
+
+    def combo(self) -> str:
+        return key_sequence_text(self.edit.keySequence())
+
+    def accept(self) -> None:  # noqa: D102 - Qt geçersiz kılma
+        problem = self._apply(self.combo())
+        if problem:
+            self.error.setText(problem)
+            self.error.show()
+            return
+        super().accept()

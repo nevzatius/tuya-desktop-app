@@ -89,6 +89,33 @@ Lights do not measure power. The app estimates: *rated power (W) × brightness �
 - English interface: the rate starts **empty** and you choose your currency (the default follows your system region). Turkish interface: the default is the EPDK residential tariff (April 2026) and the lira; check your own bill, tariffs change.
 - Records are stored locally in `energy.db`, next to your keys.
 
+## Quick access: tray, command line and shortcuts
+
+> **Not yet verified on a real device.** These features are covered by automated tests (including a real Windows `RegisterHotKey` call and a two-process command-line check), but have not been tried with a real light by the maintainer.
+
+- **Tray menu:** right-click the tray icon for a **Presets** submenu (built-in and your own) and **Pause automations / Resume automations**.
+- **Command line** (the app must already be running, it can sit in the tray):
+
+```
+TuyaDesktopApp.exe --scene "Movie"
+TuyaDesktopApp.exe --scene movie
+TuyaDesktopApp.exe --power on
+TuyaDesktopApp.exe --power off
+```
+
+  `--scene` takes a preset name (case-insensitive) or its key (`reading`, `focus`, `night`, `movie`, `romantic`, `ocean`; your own presets by name). The command is handed to the running app over a local channel that only your Windows user can open; the app then sends it to the light over Bluetooth. From source use `python light_app.py --scene "Movie"`.
+
+  | Exit code | Meaning |
+  |---|---|
+  | `0` | The command was handed to the app |
+  | `1` | The app refused it (e.g. no preset with that name; the message lists the available ones) |
+  | `2` | The app is not running |
+  | `3` | No valid reply from the app |
+  | `64` | Wrong command line |
+
+  **Windows Task Scheduler:** create a task, trigger of your choice, action *Start a program*, program `C:\Program Files\Tuya Desktop App\TuyaDesktopApp.exe`, arguments `--scene "Night"`. **Stream Deck** (or any launcher): add a *System → Open* / *Run* action with the same program and arguments. Both only work while the app is running. They do not start it: use *Start with Windows* in the installer so it is already in the tray.
+- **Global shortcuts (Windows only):** Open *Presets → Manage…*, pick a preset and press **Shortcut…** (e.g. `Ctrl+Alt+1`). It needs Ctrl, Alt or Win plus a letter, digit or F1-F12, and works everywhere while the app is running. If another app already uses the combination you get an error and the old shortcut is kept. The button is hidden on macOS and Linux.
+
 ## Privacy and security
 
 - Your lights' local keys are stored **only on this computer**, in `%APPDATA%\TuyaDesktopApp\devices.json` on Windows (macOS: `~/Library/Application Support/TuyaDesktopApp`, Linux: `~/.config/TuyaDesktopApp`). The file is not encrypted (on Linux/macOS it is readable by your user only). **Do not share it or commit it.**

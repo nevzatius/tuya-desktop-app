@@ -70,6 +70,7 @@ class MainWindow(QMainWindow):
         energy_log=None,
         preset_store: PresetStore | None = None,
         automation_host=None,
+        hotkey_manager=None,
     ) -> None:
         super().__init__()
         self.cfg = cfg
@@ -82,6 +83,7 @@ class MainWindow(QMainWindow):
         self._tray_hint_shown = False
         self._energy_log = energy_log
         self._automation_host = automation_host
+        self._hotkey_manager = hotkey_manager
         self.preset_store = preset_store if preset_store is not None else PresetStore()  # varsayılan: diske yazmayan, yalnızca yerleşik ayarlar
         self.events = diag.RecentEvents()  # tanılama raporu için son hatalar ve günlük satırları
         self._devices_list: list[lc.Config] = [cfg]
@@ -109,6 +111,14 @@ class MainWindow(QMainWindow):
     @property
     def preset_buttons(self) -> list[QPushButton]:
         return self.presets_section.buttons
+
+    def apply_preset_key(self, key: str) -> bool:
+        """Hazır ayarı kimliğiyle uygular (tepsi menüsü, genel kısayol)."""
+        preset = self.preset_store.get(key)
+        if preset is None:
+            return False
+        self._on_preset(preset)
+        return True
 
     def current_scene(self) -> dict:
         """Ekranda görünen ayar (hazır ayar olarak kaydetmek için)."""
@@ -417,7 +427,7 @@ class MainWindow(QMainWindow):
         self._select_page("white")
 
         # Hazır ayarlar (yerleşik + kullanıcının kendi ayarları)
-        self.presets_section = PresetsSection(self.preset_store, self.current_scene)
+        self.presets_section = PresetsSection(self.preset_store, self.current_scene, hotkeys=self._hotkey_manager)
         self.presets_section.applyRequested.connect(self._on_preset)
         lay.addWidget(self.presets_section)
 
@@ -642,8 +652,16 @@ class MainWindow(QMainWindow):
     # ----------------------------------------------------- tepsi ve kapanış
 
     def _setup_tray(self) -> None:
-        tray = TrayController(app_icon(), self.cfg.name, self)
+        host = self._automation_host
+        tray = TrayController(app_icon(), self.cfg.name, self, with_automation=host is not None)
         tray.power_requested.connect(self.bridge.set_power)
+        tray.preset_requested.connect(self.apply_preset_key)
+        tray.set_presets(self.preset_store.visible())
+        self.presets_section.changed.connect(lambda: tray.set_presets(self.preset_store.visible()))
+        if host is not None:
+            tray.automation_pause_requested.connect(host.set_paused)
+            tray.set_automation_paused(host.scheduler.paused)
+            host.changed.connect(lambda: tray.set_automation_paused(host.scheduler.paused))
         tray.show_requested.connect(self._toggle_visible)
         tray.quit_requested.connect(self.quit_app)
         tray.show()

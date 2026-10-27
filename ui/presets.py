@@ -6,6 +6,7 @@ import secrets
 from dataclasses import dataclass
 from pathlib import Path
 
+import shortcuts
 import storage
 from i18n import tr
 
@@ -100,6 +101,7 @@ class PresetStore:
         self.path = Path(path) if path is not None else None
         self._user: list[Preset] = []
         self._hidden: set[str] = set()
+        self._hotkeys: dict[str, str] = {}  # hazır ayar kimliği -> "Ctrl+Alt+F" (genel kısayol, yalnızca Windows'ta kullanılır)
         self.recovered_from: Path | None = None  # dosya bozuksa: yedeğin yolu
         self.problem = False  # dosya bozuktu ya da bazı kayıtlar atlandı
 
@@ -132,6 +134,18 @@ class PresetStore:
                 store._user.append(preset)
         if items is not None and not isinstance(items, list):
             skipped += 1
+        hotkeys = data.get("hotkeys")
+        if isinstance(hotkeys, dict):
+            for key, combo in hotkeys.items():
+                try:
+                    normal = shortcuts.normalise(combo)
+                except (shortcuts.HotkeyError, TypeError):
+                    skipped += 1
+                    continue
+                if store.get(key) is None or normal in store._hotkeys.values():
+                    skipped += 1
+                    continue
+                store._hotkeys[key] = normal
         if skipped:
             store.problem, store.recovered_from = True, storage.backup_file(store.path)
         return store
@@ -159,6 +173,7 @@ class PresetStore:
         payload = {
             "version": STORE_VERSION,
             "hidden": sorted(self._hidden),
+            "hotkeys": dict(sorted(self._hotkeys.items())),
             "presets": [
                 {"id": p.key, "name": p.label, "mode": p.mode, "bright": p.bright, "temp": p.temp, "hue": p.hue, "sat": p.sat}
                 for p in self._user
@@ -240,6 +255,7 @@ class PresetStore:
         self._user = [p for p in self._user if p.key != key]
         if len(self._user) == before:
             raise PresetError("unknown")
+        self._hotkeys.pop(key, None)
         self.save()
 
     def set_hidden(self, key: str, hidden: bool) -> None:
@@ -251,3 +267,33 @@ class PresetStore:
         else:
             self._hidden.discard(key)
         self.save()
+
+    # -- genel kısayollar -------------------------------------------------------
+
+    def hotkeys(self) -> dict[str, str]:
+        return dict(self._hotkeys)
+
+    def hotkey_of(self, key: str) -> str:
+        return self._hotkeys.get(key, "")
+
+    def set_hotkey(self, key: str, combo: str) -> str:
+        """Hazır ayara kısayol atar (boş metin kaldırır); kaydedilen biçimi döndürür.
+
+        Aynı kombinasyon başka bir ayarda varsa `PresetError("hotkey_duplicate")`; geçersizse "hotkey_invalid"
+        ya da "hotkey_needs_modifier". Başka bir uygulamanın kullanıp kullanmadığını `HotkeyManager` bildirir.
+        """
+        if self.get(key) is None:
+            raise PresetError("unknown")
+        if not str(combo).strip():
+            self._hotkeys.pop(key, None)
+            self.save()
+            return ""
+        try:
+            normal = shortcuts.normalise(combo)
+        except shortcuts.HotkeyError as exc:
+            raise PresetError(f"hotkey_{exc.code}") from None
+        if any(other != key and value == normal for other, value in self._hotkeys.items()):
+            raise PresetError("hotkey_duplicate")
+        self._hotkeys[key] = normal
+        self.save()
+        return normal

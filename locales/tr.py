@@ -418,4 +418,35 @@ STRINGS: dict[str, str] = {
     "automation.error_rule": "Otomasyon geçersiz.",
     "automation.error_tolerance": "Tolerans geçersiz.",
     "automation.error_write": "Dosyaya yazılamadı: {error}",
+    # -- hızlı erişim: tepsi, genel kısayollar, komut satırı --------------------------------------
+    "tray.automation_resume": "Otomasyonlara devam et",
+    "presets.hotkey": "Kısayol…",
+    "presets.hotkey_title": "Genel kısayol",
+    "presets.hotkey_label": "“{name}” için tuş kombinasyonu",
+    "presets.hotkey_hint": "Ctrl, Alt ya da Win ile bir harf, rakam ya da F1-F12 tuşu seçin (ör. Ctrl+Alt+1). Uygulama çalışırken her yerde geçerlidir. Başka bir uygulama aynı kombinasyonu kullanıyorsa kaydedilemez.",
+    "presets.hotkey_clear": "Kaldır",
+    "presets.error_hotkey_invalid": "Bu tuş desteklenmiyor. Harf, rakam ya da F1-F12 kullanın.",
+    "presets.error_hotkey_needs_modifier": "Kombinasyon Ctrl, Alt ya da Win tuşunu içermeli.",
+    "presets.error_hotkey_duplicate": "Bu kombinasyon başka bir hazır ayarda kullanılıyor.",
+    "presets.error_hotkey_conflict": "Bu kombinasyonu başka bir uygulama kullanıyor. Başka bir kombinasyon deneyin.",
+    "presets.error_hotkey_failed": "Kısayol kaydedilemedi.",
+    "presets.hotkey_startup_failed": "Şu hazır ayarların kısayolları kaydedilemedi (başka bir uygulama kullanıyor olabilir): {names}",
+    "cli.not_running": "{app} çalışmıyor. Önce uygulamayı başlatın (sistem tepsisinde de olabilir), sonra komutu yeniden deneyin.",
+    "cli.done_scene": "“{name}” ayarı uygulamaya iletildi.",
+    "cli.done_power_on": "Işığı açma komutu uygulamaya iletildi.",
+    "cli.done_power_off": "Işığı kapatma komutu uygulamaya iletildi.",
+    "cli.unknown_scene": "“{name}” adında bir hazır ayar yok. Mevcut ayarlar: {names}",
+    "cli.no_light": "Uygulamada kayıtlı ışık yok.",
+    "cli.rejected": "Uygulama komutu kabul etmedi.",
+    "cli.no_reply": "Uygulamadan geçerli bir yanıt alınamadı.",
+    "cli.usage_both": "--scene ve --power birlikte kullanılamaz.",
+    "cli.usage_missing": "Argüman eksik: --scene için bir ayar adı, --power için on ya da off yazın.",
+    "cli.usage_power_value": "--power yalnızca on ya da off alır.",
+    "cli.usage_empty_scene": "Hazır ayar adı boş olamaz.",
+    "cli.help": (
+        "Kullanım:\n"
+        "  {program} --scene \"Film\"    çalışan uygulamada bir hazır ayarı uygular\n"
+        "  {program} --power on|off    ışığı açar ya da kapatır\n"
+        "Çıkış kodları: 0 iletildi · 1 reddedildi · 2 uygulama çalışmıyor · 3 yanıt yok · 64 hatalı kullanım"
+    ),
 }

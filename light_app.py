@@ -15,7 +15,69 @@ def start_hidden(argv: list[str], has_tray: bool) -> bool:
     return "--minimized" in argv and has_tray
 
 
+def attach_console() -> None:
+    """Konsolsuz (pencere) exe komut satırından çalıştırılınca çıktı üst konsola yazılsın."""
+    if sys.platform != "win32" or not (getattr(sys, "frozen", False) or sys.stdout is None):
+        return
+    try:
+        import ctypes
+
+        if ctypes.windll.kernel32.AttachConsole(-1):  # ATTACH_PARENT_PROCESS
+            sys.stdout = open("CONOUT$", "w", encoding="utf-8")  # noqa: SIM115
+            sys.stderr = open("CONOUT$", "w", encoding="utf-8")  # noqa: SIM115
+    except Exception:  # noqa: BLE001 - konsol yoksa sessizce devam
+        pass
+
+
+def run_quick(argv: list[str], channel: str | None = None) -> int | None:
+    """`--scene "Film"` / `--power on|off`: komutu ÇALIŞAN uygulamaya iletir ve çıkış kodunu döndürür.
+
+    Hızlı komut yoksa None (normal uygulama başlar). Tek-örnek kilidi alınmaz ve pencere açılmaz.
+    """
+    import quick_cli as qc
+
+    error: qc.UsageError | None = None
+    try:
+        command = qc.parse(argv)
+    except qc.UsageError as exc:
+        command, error = None, exc
+    if command is None and error is None:
+        return None
+
+    from PySide6.QtCore import QCoreApplication, QSettings
+
+    import i18n
+    from i18n import tr
+    from version import APP_NAME
+
+    app = QCoreApplication.instance() or QCoreApplication(argv)
+    app.setOrganizationName("TuyaLight")
+    app.setApplicationName("RoomLight")
+    i18n.init(str(QSettings().value(i18n.SETTINGS_KEY, i18n.AUTO)))
+    attach_console()
+    for stream in (sys.stdout, sys.stderr):  # eski konsol kod sayfaları metni yazamasa da komut çökmesin
+        try:
+            stream.reconfigure(errors="replace")
+        except (AttributeError, ValueError):
+            pass
+    if error is not None:
+        print(tr(f"cli.usage_{error.code}"), file=sys.stderr)
+        return qc.EXIT_USAGE
+    if command == qc.HELP:
+        print(tr("cli.help", program=os.path.basename(argv[0]) or APP_NAME))
+        return qc.EXIT_OK
+    from ui import ipc
+
+    reply = ipc.send_command(command, channel)
+    print(reply.text, file=sys.stdout if reply.exit_code == qc.EXIT_OK else sys.stderr)
+    return reply.exit_code
+
+
 def main() -> int:
+    quick = run_quick(sys.argv)
+    if quick is not None:
+        return quick
+
     from PySide6.QtCore import QLockFile, QSettings, Qt
     from PySide6.QtWidgets import QApplication, QMessageBox
 
@@ -28,6 +90,8 @@ def main() -> int:
     from version import APP_NAME
     from ui.automation_host import AutomationHost, LightBackend
     from ui.bridge import LightBridge
+    from ui.hotkeys import HotkeyManager
+    from ui import ipc
     from ui.controller import AppController
     from ui.setup_dialog import SetupDialog
     from ui.icons import app_icon
@@ -81,18 +145,35 @@ def main() -> int:
         resolve_preset=presets.get,
         notify=lambda text: window.notice(text),  # pencere hemen aşağıda oluşur
     )
-    window = MainWindow(cfg, bridge, energy_log=energy_log, preset_store=presets, automation_host=host)
+    hotkeys = HotkeyManager()  # yalnızca Windows'ta etkin
+    window = MainWindow(cfg, bridge, energy_log=energy_log, preset_store=presets, automation_host=host, hotkey_manager=hotkeys)
     tracker = energy.UsageTracker(energy_log) if energy_log is not None else None
     AppController(store, bridge, window, tracker=tracker)
+    hotkeys.triggered.connect(window.apply_preset_key)
+    command_server = ipc.CommandServer(
+        ipc.make_handler(
+            presets.find,
+            lambda: [p.name for p in presets.all()],
+            window.apply_preset_key,
+            bridge.set_power,
+            lambda: store.current() is not None,
+        )
+    )
+    command_server.start()  # tek-örnek kilidini aldıktan sonra: komut satırı bu kanaldan çalışan uygulamaya ulaşır
     if not start_hidden(sys.argv, window.has_tray):
         window.show()
     if presets.problem:
         window.notice(tr("presets.recovered"))
     if rules.problem:
         window.notice(tr("automation.recovered"))
+    failed = hotkeys.apply(presets.hotkeys())  # başka uygulamanın aldığı kısayollar kaydedilemez
+    if failed:
+        window.notice(tr("presets.hotkey_startup_failed", names=", ".join(p.name for k in failed if (p := presets.get(k)) is not None)))
     bridge.start()
     host.start()
     code = app.exec()
+    command_server.close()
+    hotkeys.shutdown()
     host.shutdown()
     bridge.shutdown()
     if energy_log is not None:
