@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QSettings, Qt, QUrl, Signal
-from PySide6.QtGui import QActionGroup, QColor, QDesktopServices, QIcon, QKeySequence, QPainter, QPixmap, QShortcut
+from PySide6.QtGui import QActionGroup, QDesktopServices, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
     QButtonGroup,
     QFrame,
-    QGridLayout,
     QHBoxLayout,
     QLabel,
     QMainWindow,
@@ -35,7 +34,8 @@ from version import APP_NAME, APP_URL
 from .energy_page import EnergyPage
 from .colors import COOL, NEUTRAL, WARM, accent_for, hex_of, hs_rgb, shade
 from .icons import app_icon
-from .presets import PRESETS, Preset
+from .presets import Preset, PresetStore
+from .presets_view import PresetsSection, dot_icon
 from .tray import TrayController
 from .trouble import BLUETOOTH_SETTINGS_URL, TroubleshootCard
 from .widgets import ColorWheel, GradientSlider, PowerButton, StatusPill
@@ -54,19 +54,6 @@ def default_open_url(url: str) -> None:
     QDesktopServices.openUrl(QUrl(url))
 
 
-def _dot_icon(rgb: tuple[int, int, int], size: int = 16) -> QIcon:
-    pm = QPixmap(size * 2, size * 2)
-    pm.fill(Qt.GlobalColor.transparent)
-    p = QPainter(pm)
-    p.setRenderHint(QPainter.RenderHint.Antialiasing)
-    p.setPen(Qt.PenStyle.NoPen)
-    p.setBrush(QColor(*rgb))
-    p.drawEllipse(3, 3, size * 2 - 6, size * 2 - 6)
-    p.end()
-    pm.setDevicePixelRatio(2)
-    return QIcon(pm)
-
-
 class MainWindow(QMainWindow):
     deviceChosen = Signal(str)  # menüden başka ışık seçildi (cihaz kimliği)
     addRequested = Signal()
@@ -80,6 +67,7 @@ class MainWindow(QMainWindow):
         settings: QSettings | None = None,
         use_tray: bool = True,
         energy_log=None,
+        preset_store: PresetStore | None = None,
     ) -> None:
         super().__init__()
         self.cfg = cfg
@@ -91,6 +79,7 @@ class MainWindow(QMainWindow):
         self._tray: TrayController | None = None
         self._tray_hint_shown = False
         self._energy_log = energy_log
+        self.preset_store = preset_store if preset_store is not None else PresetStore()  # varsayılan: diske yazmayan, yalnızca yerleşik ayarlar
         self.events = diag.RecentEvents()  # tanılama raporu için son hatalar ve günlük satırları
         self._devices_list: list[lc.Config] = [cfg]
         self._connected: bool | None = None
@@ -113,6 +102,16 @@ class MainWindow(QMainWindow):
     @property
     def has_tray(self) -> bool:
         return self._tray is not None
+
+    @property
+    def preset_buttons(self) -> list[QPushButton]:
+        return self.presets_section.buttons
+
+    def current_scene(self) -> dict:
+        """Ekranda görünen ayar (hazır ayar olarak kaydetmek için)."""
+        hue, sat = self.wheel.hs()
+        mode = "colour" if self.stack.currentIndex() == PAGE_COLOUR else "white"
+        return {"mode": mode, "bright": self.bright.value(), "temp": self.temp.value(), "hue": hue, "sat": sat}
 
     # ------------------------------------------------------------------ yapı
 
@@ -145,13 +144,22 @@ class MainWindow(QMainWindow):
     def show_info(self, text: str) -> None:
         QMessageBox.information(self, APP_NAME, text)
 
+    def notice(self, text: str) -> None:
+        """Pencere kapalı olsa da görünen kısa bildirim: tepsi balonu, tepsi yoksa hata bandı."""
+        self.events.add_log(text)
+        if self._tray is not None:
+            self._tray.notify(APP_NAME, text)
+        else:
+            self.banner.setText(text)
+            self.banner.show()
+
     def set_devices(self, devices: list[lc.Config], selected: str) -> None:
         """Başlıktaki ışık seçici menüsünü yeniler."""
         self._devices_list = list(devices)
         self.device_menu.clear()
         self._device_actions = {}
         for dev in devices:
-            action = self.device_menu.addAction(_dot_icon(WARM if dev.device_id == selected else (90, 98, 116)), dev.name)
+            action = self.device_menu.addAction(dot_icon(WARM if dev.device_id == selected else (90, 98, 116)), dev.name)
             action.triggered.connect(lambda _=False, i=dev.device_id: self._choose_device(i))
             self._device_actions[dev.device_id] = action
         if devices:
@@ -380,24 +388,10 @@ class MainWindow(QMainWindow):
         self._update_hex()
         self._select_page("white")
 
-        # Hazır ayarlar
-        presets_title = QLabel(i18n.upper(tr("main.presets")))
-        presets_title.setObjectName("cardTitle")
-        lay.addWidget(presets_title)
-        grid = QGridLayout()
-        grid.setHorizontalSpacing(10)
-        grid.setVerticalSpacing(10)
-        self.preset_buttons: list[QPushButton] = []
-        for index, preset in enumerate(PRESETS):
-            button = QPushButton(preset.name)
-            button.setObjectName("chip")
-            button.setCursor(Qt.CursorShape.PointingHandCursor)
-            button.setIcon(_dot_icon(preset.swatch()))
-            button.setProperty("preset", preset.name)
-            button.clicked.connect(lambda _checked=False, p=preset: self._on_preset(p))
-            grid.addWidget(button, index // 3, index % 3)
-            self.preset_buttons.append(button)
-        lay.addLayout(grid)
+        # Hazır ayarlar (yerleşik + kullanıcının kendi ayarları)
+        self.presets_section = PresetsSection(self.preset_store, self.current_scene)
+        self.presets_section.applyRequested.connect(self._on_preset)
+        lay.addWidget(self.presets_section)
 
         # Araçlar + günlük
         tools = QHBoxLayout()

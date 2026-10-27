@@ -30,6 +30,7 @@ def main() -> int:
     from ui.setup_dialog import SetupDialog
     from ui.icons import app_icon
     from ui.main_window import MainWindow
+    from ui.presets import PresetStore
     from ui.theme import apply_theme
 
     app = QApplication(sys.argv)
@@ -69,11 +70,14 @@ def main() -> int:
     except Exception:  # noqa: BLE001 - disk/izin sorunu enerji kaydını engellemesin
         energy_log = None
     bridge = LightBridge(cfg)
-    window = MainWindow(cfg, bridge, energy_log=energy_log)
+    presets = PresetStore.load()  # bozuksa yedeği alınır, yerleşik ayarlarla devam edilir
+    window = MainWindow(cfg, bridge, energy_log=energy_log, preset_store=presets)
     tracker = energy.UsageTracker(energy_log) if energy_log is not None else None
     AppController(store, bridge, window, tracker=tracker)
     if not start_hidden(sys.argv, window.has_tray):
         window.show()
+    if presets.problem:
+        window.notice(tr("presets.recovered"))
     bridge.start()
     code = app.exec()
     bridge.shutdown()
