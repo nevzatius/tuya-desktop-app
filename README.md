@@ -28,7 +28,7 @@ birden çok ışık, sistem tepsisi ve **tahmini enerji/maliyet (TL)** sekmesi.
 ## Kurulum
 
 ### Hazır sürüm (Windows)
-[Sürümler](../../releases) sayfasından `OdamdakiIsik-windows.zip` dosyasını indirip çıkarın ve
+[Sürümler](https://github.com/nevzatius/tuya-desktop-app/releases) sayfasından `OdamdakiIsik-windows.zip` dosyasını indirip çıkarın ve
 `OdamdakiIsik.exe`'yi çalıştırın. (Windows SmartScreen "bilinmeyen yayıncı" diyebilir: imzalı değildir.)
 
 ### Kaynaktan
