@@ -18,9 +18,9 @@ birden çok ışık, sistem tepsisi ve **tahmini enerji/maliyet (TL)** sekmesi.
 
 | | |
 |---|---|
-| Bluetooth (BLE) bağlantısı ve el sıkışma | Gerçek bir ışıkla (Tuya `dj` kategorisi, YX-ZNLD9) denendi, çalışıyor |
-| Komutlar (aç/kapat, parlaklık, renk…) ve arayüz | Testlerle doğrulandı; **gerçek ışıkta uçtan uca doğrulama sürüyor** |
-| Windows 10/11 | Birincil hedef. Arayüzün gerçek Windows'ta geniş denemesi henüz yok |
+| Bluetooth (BLE) bağlantısı ve el sıkışma | Gerçek ışıkla (Tuya `dj` kategorisi, YX-ZNLD9) Windows'ta denendi, çalışıyor |
+| Güç, parlaklık, beyaz sıcaklığı, renk çarkı ve hazır ayarlar | Aynı ışıkla Windows'ta uçtan uca denendi, çalışıyor; ayrıca testlerle doğrulandı |
+| Windows 10/11 | Birincil hedef. Tek bir bilgisayarda ve tek bir ışık modeliyle denendi, daha geniş deneme henüz yok |
 | macOS / Linux | Çalışması beklenir (Qt + bleak), denenmedi |
 | Wi-Fi (yerel ağ) kontrolü | **Henüz yok** (planlı, aşağıya bakın) |
 | Diğer ışık modelleri | Standart `dj` komut setini kullananların çalışması beklenir. Denediyseniz bir "issue" açıp modeli yazın |
