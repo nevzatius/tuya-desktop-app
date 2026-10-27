@@ -412,3 +412,41 @@ class ColorWheel(QWidget):
         p.drawEllipse(marker, 12, 12)
         p.setBrush(qcolor(hs_rgb(self._hue, self._sat)))
         p.drawEllipse(marker, 8, 8)
+
+
+class ToggleSwitch(QAbstractButton):
+    """Aç/kapa anahtarı (yuvarlak düğmeli). Kullanıcı tıklayınca `clicked(bool)` gelir; kodla değiştirmek sinyal göndermez."""
+
+    WIDTH, HEIGHT = 42, 24
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setCheckable(True)
+        self.setFixedSize(self.WIDTH, self.HEIGHT)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+
+    def set_on(self, on: bool) -> None:
+        self.blockSignals(True)
+        try:
+            self.setChecked(on)
+        finally:
+            self.blockSignals(False)
+        self.update()
+
+    def paintEvent(self, _event) -> None:  # noqa: N802
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        track = QRectF(1, 1, self.width() - 2, self.height() - 2)
+        on = self.isChecked()
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QColor("#8fb4ff") if on else QColor("#2a303d"))
+        p.drawRoundedRect(track, track.height() / 2, track.height() / 2)
+        knob = track.height() - 6
+        x = track.right() - knob - 3 if on else track.left() + 3
+        p.setBrush(QColor("#10131a") if on else QColor("#9aa3b8"))
+        p.drawEllipse(QRectF(x, track.top() + 3, knob, knob))
+        if self.hasFocus():
+            p.setPen(QPen(QColor(255, 255, 255, 90), 1.2, Qt.PenStyle.DashLine))
+            p.setBrush(Qt.BrushStyle.NoBrush)
+            p.drawRoundedRect(track.adjusted(-1, -1, 1, 1), track.height() / 2, track.height() / 2)

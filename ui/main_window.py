@@ -31,6 +31,7 @@ import light_core as lc
 from i18n import tr
 from version import APP_NAME, APP_URL
 
+from .automation_page import AutomationPage
 from .energy_page import EnergyPage
 from .colors import COOL, NEUTRAL, WARM, accent_for, hex_of, hs_rgb, shade
 from .icons import app_icon
@@ -68,6 +69,7 @@ class MainWindow(QMainWindow):
         use_tray: bool = True,
         energy_log=None,
         preset_store: PresetStore | None = None,
+        automation_host=None,
     ) -> None:
         super().__init__()
         self.cfg = cfg
@@ -79,6 +81,7 @@ class MainWindow(QMainWindow):
         self._tray: TrayController | None = None
         self._tray_hint_shown = False
         self._energy_log = energy_log
+        self._automation_host = automation_host
         self.preset_store = preset_store if preset_store is not None else PresetStore()  # varsayılan: diske yazmayan, yalnızca yerleşik ayarlar
         self.events = diag.RecentEvents()  # tanılama raporu için son hatalar ve günlük satırları
         self._devices_list: list[lc.Config] = [cfg]
@@ -178,6 +181,9 @@ class MainWindow(QMainWindow):
         else:
             self.device_button.setText(f"{self.cfg.name}  ▾")
             self.setWindowTitle(self.cfg.name)
+        page = getattr(self, "automation_page", None)
+        if page is not None:  # ışık adları kural özetlerinde görünür
+            page.refresh()
 
     def show_empty(self) -> None:
         """Hiç ışık kalmadı."""
@@ -277,13 +283,15 @@ class MainWindow(QMainWindow):
         self.tab_group = QButtonGroup(self)
         self.tab_control = QPushButton(tr("main.tab_control"))
         self.tab_energy = QPushButton(tr("main.tab_energy"))
-        for button in (self.tab_control, self.tab_energy):
+        self.tab_automation = QPushButton(tr("main.tab_automation"))
+        for button in (self.tab_control, self.tab_energy, self.tab_automation):
             button.setObjectName("seg")
             button.setCheckable(True)
             button.setCursor(Qt.CursorShape.PointingHandCursor)
             self.tab_group.addButton(button)
             tabs.addWidget(button)
         self.tab_control.setChecked(True)
+        self.tab_automation.setVisible(self._automation_host is not None)
         top_lay.addWidget(tabs_wrap)
         outer.addWidget(top)
 
@@ -314,6 +322,26 @@ class MainWindow(QMainWindow):
         holder_lay.addWidget(self.energy)
         energy_scroll.setWidget(energy_holder)
         self.pages.addWidget(energy_scroll)
+
+        self.automation_page: AutomationPage | None = None
+        automation_scroll = QScrollArea()
+        automation_scroll.setWidgetResizable(True)
+        automation_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        automation_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        automation_holder = QWidget()
+        automation_holder.setObjectName("content")
+        automation_lay = QVBoxLayout(automation_holder)
+        automation_lay.setContentsMargins(24, 12, 24, 24)
+        if self._automation_host is not None:
+            self.automation_page = AutomationPage(
+                self._automation_host,
+                lambda: [(d.device_id, d.name) for d in self._devices_list],
+                self.preset_store,
+                self._settings,
+            )
+            automation_lay.addWidget(self.automation_page)
+        automation_scroll.setWidget(automation_holder)
+        self.pages.addWidget(automation_scroll)
 
         # Güç düğmesi
         self.power = PowerButton()
@@ -428,6 +456,9 @@ class MainWindow(QMainWindow):
         self.seg_colour.clicked.connect(lambda: self._on_mode("colour"))
         self.tab_control.clicked.connect(lambda: self.pages.setCurrentIndex(0))
         self.tab_energy.clicked.connect(lambda: self.pages.setCurrentIndex(1))
+        self.tab_automation.clicked.connect(lambda: self.pages.setCurrentIndex(2))
+        if self.automation_page is not None:
+            self.presets_section.changed.connect(self.automation_page.refresh)  # özetlerdeki hazır ayar adları
         self.log_toggle.toggled.connect(self.log_view.setVisible)
         self.reconnect_button.clicked.connect(self.bridge.reconnect)
         self.refresh_button.clicked.connect(self.bridge.refresh)

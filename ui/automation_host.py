@@ -135,7 +135,8 @@ class AutomationHost(QObject):
     """Dakikalık zamanlayıcı + kural çalıştırıcı. Kural değişiklikleri buradan geçer (`changed` sinyali)."""
 
     resultReady = Signal(object)  # automation.Result (ana iş parçacığına kuyruklanır)
-    changed = Signal()  # kurallar, ayarlar ya da duraklatma durumu değişti
+    changed = Signal()  # kurallar, ayarlar, duraklatma ya da çalışma durumu değişti
+    _finished = Signal(str)  # (iç) kural çalıştırması bitti; BLE/otomasyon iş parçacığından ana iş parçacığına
 
     def __init__(
         self,
@@ -166,7 +167,9 @@ class AutomationHost(QObject):
             describe_error=lc.friendly_error,
         )
         self.last: dict[str, au.Result] = {}  # kural -> en son sonucu (arayüzde durum için)
+        self.running: dict[str, int] = {}  # kural -> şu an süren çalıştırma sayısı (yumuşak geçişler dakikalarca sürer)
         self.resultReady.connect(self._on_result)
+        self._finished.connect(self._on_finished)
         self._loop: asyncio.AbstractEventLoop | None = None
         self._thread: threading.Thread | None = None
         self._submit_override = submit
@@ -197,13 +200,15 @@ class AutomationHost(QObject):
             self._thread.join(timeout=3)
             self._loop = self._thread = None
 
-    def _submit(self, coroutine: Coroutine) -> None:
+    def _submit(self, coroutine: Coroutine) -> bool:
         if self._submit_override is not None:
             self._submit_override(coroutine)
-        elif self._loop is not None:
+            return True
+        if self._loop is not None:
             asyncio.run_coroutine_threadsafe(coroutine, self._loop)
-        else:
-            coroutine.close()  # başlatılmadı: çalıştırılmayacak
+            return True
+        coroutine.close()  # başlatılmadı: çalıştırılmayacak
+        return False
 
     # -- zamanlama -------------------------------------------------------------------------------------
 
@@ -218,7 +223,31 @@ class AutomationHost(QObject):
 
     def run(self, rule: au.Rule) -> None:
         """Kuralı hemen çalıştırır ("Şimdi çalıştır" ve zamanı gelenler); arayüzü bloklamaz."""
-        self._submit(self.runner.run_rule(rule))
+        rule_id = rule.id
+        self.running[rule_id] = self.running.get(rule_id, 0) + 1
+
+        async def job() -> None:
+            try:
+                await self.runner.run_rule(rule)
+            finally:
+                self._finished.emit(rule_id)
+
+        if not self._submit(job()):
+            self._on_finished(rule_id, notify=False)
+        else:
+            self.changed.emit()
+
+    def is_running(self, rule_id: str) -> bool:
+        return self.running.get(rule_id, 0) > 0
+
+    def _on_finished(self, rule_id: str, notify: bool = True) -> None:
+        count = self.running.get(rule_id, 0) - 1
+        if count > 0:
+            self.running[rule_id] = count
+        else:
+            self.running.pop(rule_id, None)
+        if notify:
+            self.changed.emit()
 
     # -- kural işlemleri (arayüz buradan geçer) ----------------------------------------------------------
 

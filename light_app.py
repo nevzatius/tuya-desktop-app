@@ -73,13 +73,17 @@ def main() -> int:
         energy_log = None
     bridge = LightBridge(cfg)
     presets = PresetStore.load()  # bozuksa yedeği alınır, yerleşik ayarlarla devam edilir
-    window = MainWindow(cfg, bridge, energy_log=energy_log, preset_store=presets)
-    tracker = energy.UsageTracker(energy_log) if energy_log is not None else None
-    AppController(store, bridge, window, tracker=tracker)
     rules = au.RuleStore.load()  # bozuksa yedeği alınır, boş başlanır
     host = AutomationHost(
-        rules, au.EngineState.load(), LightBackend(store, bridge), resolve_preset=presets.get, notify=window.notice
+        rules,
+        au.EngineState.load(),
+        LightBackend(store, bridge),
+        resolve_preset=presets.get,
+        notify=lambda text: window.notice(text),  # pencere hemen aşağıda oluşur
     )
+    window = MainWindow(cfg, bridge, energy_log=energy_log, preset_store=presets, automation_host=host)
+    tracker = energy.UsageTracker(energy_log) if energy_log is not None else None
+    AppController(store, bridge, window, tracker=tracker)
     if not start_hidden(sys.argv, window.has_tray):
         window.show()
     if presets.problem:

@@ -172,3 +172,57 @@ class Preset:
     temp: int = 0
     hue: int = 0
     sat: int = 0
+
+
+# -- sahte ışık istemcisi (LightClient'ın otomasyonun kullandığı yüzeyi) ---------------------------------------
+
+
+class FakeClient:
+    """LightClient'ın otomasyonun kullandığı yüzeyi."""
+
+    instances: list["FakeClient"] = []
+
+    def __init__(self, cfg, on_state=None, on_status=None, on_log=None):
+        self.cfg = cfg
+        self.listeners = (on_state, on_status, on_log)
+        self.calls: list[tuple] = []
+        self.is_connected = False
+        self.state = lc.LightState()
+        self.connect_error: Exception | None = None
+        FakeClient.instances.append(self)
+
+    @property
+    def connected(self):
+        return self.is_connected
+
+    async def connect(self):
+        self.calls.append(("connect",))
+        if self.connect_error:
+            raise self.connect_error
+        self.is_connected = True
+        self.state = lc.LightState(power=False, mode="white", brightness_pct=30, temp_pct=40)
+
+    async def close(self):
+        self.calls.append(("close",))
+        self.is_connected = False
+
+    async def set_power(self, on):
+        self.calls.append(("power", on))
+
+    async def set_brightness(self, pct):
+        self.calls.append(("brightness", pct))
+
+    async def set_white(self, b, t):
+        self.calls.append(("white", b, t))
+
+    async def set_colour_hs(self, h, s, b):
+        self.calls.append(("colour", h, s, b))
+
+    async def send(self, dps):
+        self.calls.append(("send", dps))
+
+    async def refresh(self):
+        pass
+
+    async def reconnect(self):
+        self.is_connected = True

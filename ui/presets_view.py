@@ -258,8 +258,11 @@ class PresetsSection(QWidget):
     def refresh(self) -> None:
         while self._grid.count():
             item = self._grid.takeAt(0)
-            if item.widget() is not None:
-                item.widget().deleteLater()
+            widget = item.widget()
+            if widget is not None:
+                widget.hide()  # deleteLater olay döngüsüne dönene kadar bekler; o sırada eski çip çizilmesin
+                widget.setParent(None)
+                widget.deleteLater()
         self.buttons = []
         presets = self.store.visible()
         for index, preset in enumerate(presets):
