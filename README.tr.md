@@ -66,10 +66,15 @@ Gerçek cihazla nelerin denendiğinin, nelerin denenmediğinin dürüst özeti:
 | **Yanıp söndür** düğmesi (ışığı tanıma) | Deneysel — **gerçek cihazda henüz doğrulanmadı** |
 | **Sorun giderici** kart ve tanılama raporu | Deneysel — **gerçek cihazda henüz doğrulanmadı** (raporun gizlilik filtresi testlerle sınandı) |
 | Kendi hazır ayarlarınız (kaydet, düzenle, sil, gizle) | Yalnızca otomatik testler — **gerçek cihazda henüz doğrulanmadı** |
-| **Otomasyonlar** (saat / gün doğumu-batımı / uygulama açılışı tetikleyicileri, yumuşak geçiş, birden çok ışık, kaçırılan kural toleransı) | Yalnızca otomatik testler — **gerçek cihazda henüz doğrulanmadı** |
-| Tepsi hazır ayarları, komut satırı (`--scene`, `--power`) ve genel kısayol tuşları | Otomatik testler (gerçek bir Windows `RegisterHotKey` çağrısı ve iki süreçli komut satırı denemesi dahil) — **gerçek cihazda henüz doğrulanmadı** |
+| **Otomasyonlar**: saat ve uygulama açılışı tetikleyicileri, aç/kapat/parlaklık/beyaz/renk/hazır ayar eylemleri, yumuşak geçiş | Yalnızca otomatik testler — **gerçek cihazda henüz doğrulanmadı** |
+| Otomasyonlar: **gün doğumu / batımı** tetikleyicileri | Yalnızca bilinen yerlere karşı testler — **gerçek cihazda henüz doğrulanmadı** |
+| Otomasyonlar: hedef olarak **birden çok ışık** | Yalnızca otomatik testler — **gerçek cihazda henüz doğrulanmadı** |
+| Otomasyonlar: **kaçırılan kural** (uyanma ya da açılıştan sonra tolerans içinde bir kez çalışır) | Yalnızca otomatik testler — **gerçek cihazda henüz doğrulanmadı** |
+| Otomasyonlar: **ulaşılamayan ışık** (3 deneme, sonra tepsi bildirimi) | Yalnızca otomatik testler — **gerçek cihazda henüz doğrulanmadı** |
+| Tepsi hazır ayarları ve komut satırı (`--scene`, `--power`) | Otomatik testler (iki süreçli komut satırı denemesi dahil) — **gerçek cihazda henüz doğrulanmadı** |
+| **Genel kısayol tuşları** | Otomatik testler (gerçek bir Windows `RegisterHotKey` çağrısı dahil) — **gerçek cihazda henüz doğrulanmadı** |
 | Windows yükleyicisi ve taşınabilir zip | Derleme betikleri ve release iş akışı yazıldı; **geliştirici tarafından henüz derlenip denenmedi** |
-| İngilizce arayüz | Otomatik testler ve üretilen ekran görüntüleri; İngilizce Windows'ta henüz gözden geçirilmedi |
+| **İngilizce arayüz** | Otomatik testler ve üretilen ekran görüntüleri — İngilizce Windows'ta **henüz doğrulanmadı** |
 | Windows 10/11 | Birincil hedef; arayüz gerçek Windows kurulumlarında henüz geniş denenmedi |
 | macOS / Linux | Çalışması beklenir (Qt + bleak), **denenmedi** |
 | Wi-Fi (yerel ağ) kontrolü | **Henüz yok** (planlı) |

@@ -66,10 +66,15 @@ An honest summary of what has and has not been tried on real hardware:
 | **Blink** button (identify a light) | Experimental — **not yet verified on a real device** |
 | **Troubleshooter** card and diagnostic report | Experimental — **not yet verified on a real device** (the report's privacy filter is covered by tests) |
 | Your own presets (save, edit, delete, hide) | Automated tests only — **not yet verified on a real device** |
-| **Automations** (time / sunrise-sunset / app start triggers, smooth fade, several lights, missed-rule tolerance) | Automated tests only — **not yet verified on a real device** |
-| Tray presets, command line (`--scene`, `--power`) and global shortcuts | Automated tests, including a real Windows `RegisterHotKey` call and a two-process command-line check — **not yet verified on a real device** |
+| **Automations**: time and app-start triggers, on/off/brightness/white/colour/preset actions, smooth fade | Automated tests only — **not yet verified on a real device** |
+| Automations: **sunrise / sunset** triggers | Checked against known places in tests only — **not yet verified on a real device** |
+| Automations: **several lights** as a target | Automated tests only — **not yet verified on a real device** |
+| Automations: **missed rule** (runs once within the tolerance after waking or starting) | Automated tests only — **not yet verified on a real device** |
+| Automations: **unreachable light** (3 tries, then a tray notification) | Automated tests only — **not yet verified on a real device** |
+| Tray presets and command line (`--scene`, `--power`) | Automated tests, including a two-process command-line check — **not yet verified on a real device** |
+| **Global shortcuts** | Automated tests, including a real Windows `RegisterHotKey` call — **not yet verified on a real device** |
 | Windows installer and portable zip | Build scripts and release workflow written; **not yet built and tried by the maintainer** |
-| English interface | Automated tests and generated screenshots; not yet reviewed on an English-language Windows |
+| **English interface** | Automated tests and generated screenshots — **not yet verified** on an English-language Windows |
 | Windows 10/11 | Primary target; the UI has had little wide testing on real Windows installs |
 | macOS / Linux | Expected to work (Qt + bleak), **not tried** |
 | Wi-Fi (local network) control | **Not available yet** (planned) |
