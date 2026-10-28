@@ -35,7 +35,7 @@ Get-FileHash .\TuyaDesktopApp-Setup-0.4.0.exe -Algorithm SHA256
 - **Unsigned installer.** Windows SmartScreen may warn (see above).
 - **Energy values are estimates** (rated watts × brightness × time), recorded only while the app is open and connected.
 - **Automations run only while the app is running,** the computer is awake and the light is in range; they are separate from Smart Life cloud timers.
-- **Not tried on a real device:** sunrise/sunset triggers, several lights, global shortcuts and the English interface have **not yet been verified** with real hardware. The same goes for the setup wizard v2, the Blink button, the troubleshooter and the portable zip.
+- **Not tried on a real device:** sunrise/sunset triggers, several lights, global shortcuts and the English interface have **not yet been verified** with real hardware. The same goes for the automations' app-start trigger and white / colour / preset actions, the setup wizard v2, the Blink button, the troubleshooter and the portable zip.
 - **Tried on a real light:** Bluetooth connection, on/off, brightness and colour, presets, a timed rule, smooth fades, pausing automations, the command line, the log, the installer and the tray menu.
 
 The README *Status* table is the detailed, honest list. Please report what works (or not) with your light via a [device report](https://github.com/nevzatius/tuya-desktop-app/issues/new?template=device_report.yml).
@@ -79,9 +79,11 @@ Get-FileHash .\TuyaDesktopApp-Setup-0.4.0.exe -Algorithm SHA256
 - **İmzasız kurulum.** Windows SmartScreen uyarı verebilir (yukarıya bakın).
 - **Enerji değerleri tahmindir** (anma gücü × parlaklık × süre); yalnızca uygulama açık ve bağlıyken kaydedilir.
 - **Otomasyonlar yalnızca uygulama çalışırken,** bilgisayar uyanıkken ve ışık menzildeyken çalışır; Smart Life bulut zamanlayıcılarından ayrıdır.
-- **Gerçek cihazda henüz doğrulanmadı (denenmedi):** gün doğumu/batımı tetikleyicileri, birden çok ışık, genel kısayol tuşları ve İngilizce arayüz. Ayrıca doğrulanmadı: kurulum sihirbazı v2, Yanıp söndür düğmesi, sorun giderici ve taşınabilir zip.
+- **Gerçek cihazda henüz doğrulanmadı (denenmedi):** gün doğumu/batımı tetikleyicileri, birden çok ışık, genel kısayol tuşları ve İngilizce arayüz. Ayrıca doğrulanmadı: otomasyonların uygulama açılışı tetikleyicisi ve beyaz / renk / hazır ayar eylemleri, kurulum sihirbazı v2, Yanıp söndür düğmesi, sorun giderici ve taşınabilir zip.
 - **Gerçek ışıkta denendi:** Bluetooth bağlantısı, aç/kapat, parlaklık ve renk, hazır ayarlar, saatli kural, yumuşak geçiş, otomasyonu duraklatma, komut satırı, günlük, yükleyici ve tepsi menüsü.
 
 Ayrıntılı ve dürüst liste README'deki *Durum* tablosundadır. Işığınızla neyin çalışıp çalışmadığını [cihaz raporu](https://github.com/nevzatius/tuya-desktop-app/issues/new?template=device_report.yml) ile bildirebilirsiniz.
 
 ---
+
+**Full Changelog**: https://github.com/nevzatius/tuya-desktop-app/compare/v0.2.0...v0.4.0
