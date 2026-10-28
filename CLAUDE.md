@@ -31,6 +31,7 @@ Tuya/Smart Life ışıklarını Bluetooth LE ile kontrol eden Windows odaklı ma
 ## Kurallar
 - GİZLİ BİLGİ: yerel anahtar, Access Secret, cihaz kimliği, MAC, uuid asla commit, log, test verisi, ekran görüntüsü ya da sohbet çıktısında olmasın. config.json, devices.json, tinytuya.json, tuya-raw.json, *.db ve kullanıcı verisi (presets/automations json) .gitignore'da.
 - Git: ben söylemeden push, force-push, etiket, release, PR birleştirme, depo ayarı değişikliği YOK. Her iş ayrı commit. `git add .` yerine dosyaları adıyla ekle.
+- Testler gerçek cihaza ve çalışan uygulamaya dokunmamalı: tests/conftest.py `_isolated_world` (autouse) veri klasörlerini/QSettings'i geçici dizine yönlendirir, Bleak'i engeller, komut kanalı adını benzersiz yapar (gerçek kanala bağlanma/dinleme hata), RegisterHotKey'i sahteye bağlar. Aşma; Bluetooth gerekiyorsa sahte nesne kullan. tests/test_isolation.py koruma çalışıyor mu diye sınar.
 - Yeni kullanıcı metni her zaman tr ve en'de eklenir; tests/test_i18n.py (anahtar tamlığı, gömülü Türkçe metin yok) geçmeli.
 - Bağımlılık ekleme; gerekiyorsa önce sor.
 - tuya-ble-sdk'nın alt çizgili iç metotlarına dayanıyoruz; sürüm sabit (requirements.txt: ==0.1.3).

@@ -126,3 +126,11 @@ def test_hotkeys_use_the_fake_backend_and_emulate_conflicts(qapp):
     manager.shutdown()
     other.shutdown()
     assert FakeWin32Hotkeys.registry == {}
+
+
+def test_the_guard_is_documented_for_contributors_and_for_claude():
+    root = Path(__file__).resolve().parents[1]
+    contributing = (root / "CONTRIBUTING.md").read_text(encoding="utf-8")
+    claude = (root / "CLAUDE.md").read_text(encoding="utf-8")
+    assert "never touch a real light or a running copy of the app" in contributing and "tests/conftest.py" in contributing
+    assert "_isolated_world" in claude and "gerçek cihaza ve çalışan uygulamaya dokunmamalı" in claude
