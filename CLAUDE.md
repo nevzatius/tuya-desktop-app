@@ -11,6 +11,7 @@ Tuya/Smart Life ışıklarını Bluetooth LE ile kontrol eden Windows odaklı ma
   - automation.py: otomasyon motoru (kurallar, zamanlayıcı, yumuşak geçiş); sun.py: gün doğumu/batımı hesabı
   - quick_cli.py: --scene/--power argüman çözümleme; shortcuts.py: genel kısayol kombinasyonu çözümleme
   - diagnostics.py: tanılama raporu ve günlük/rapor maskeleme (gizli bilgi süzgeci burada)
+  - applog.py: döner app.log (~1 MB x 3, veri klasöründe); her satır privacy.redact'ten geçer, rapor son satırlarını alır
 - ui/: PySide6 arayüzü
   - main_window, setup_dialog, controller, energy_page, widgets, theme, tray, trouble, workers
   - presets, presets_view, scene_editor: hazır ayarlar ve parlaklık/renk düzenleyici

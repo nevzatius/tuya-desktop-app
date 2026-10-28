@@ -155,7 +155,7 @@ TuyaDesktopApp.exe --power off
 - Your lights' local keys are stored **only on this computer**, in `%APPDATA%\TuyaDesktopApp\devices.json` on Windows (macOS: `~/Library/Application Support/TuyaDesktopApp`, Linux: `~/.config/TuyaDesktopApp`). The file is not encrypted (on Linux/macOS it is readable by your user only). **Do not share it or commit it.**
 - The **Access Secret** is used only for the one-time fetch and is never saved. After a successful fetch the app also clears the clipboard if it still holds that secret.
 - The app sends no data anywhere. The internet is used only by the setup wizard to talk to Tuya Cloud.
-- Logs, error messages and the diagnostic report mask local keys, device IDs, UUIDs, Bluetooth addresses and light names.
+- Logs, error messages and the diagnostic report mask local keys, device IDs, UUIDs, Bluetooth addresses and light names. The app keeps a rotating log (`app.log`, three files of about 1 MB, in the data folder); every line is masked before it is written, and the diagnostic report includes its last lines.
 - Anyone who knows a light's local key and is within Bluetooth range can control that light.
 - Uninstalling keeps your lights and energy history unless you choose to delete them.
 - Upgrading from an older version (data folder `OdamdakiIsik`): your lights and energy history are moved automatically on first start.

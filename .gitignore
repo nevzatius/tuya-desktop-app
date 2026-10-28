@@ -23,3 +23,5 @@ presets.json
 automations.json
 automation_state.json
 *.bad-*
+*.log
+*.log.[0-9]

@@ -117,6 +117,13 @@ def main() -> int:
     if quick is not None:
         return quick
 
+    import applog
+    import diagnostics
+
+    store = None  # ışık deposu (aşağıda yüklenir); günlük, depodaki gizli değerleri her satırda maskeler
+    applog.setup(secrets=lambda: diagnostics.known_secrets(store.devices()) if store is not None else [])
+    applog.install_excepthooks()
+
     from PySide6.QtCore import QLockFile, QSettings, Qt
     from PySide6.QtWidgets import QApplication, QMessageBox
 

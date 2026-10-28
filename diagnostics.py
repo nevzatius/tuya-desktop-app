@@ -3,7 +3,8 @@
 Rapora YALNIZCA şunlar girer: uygulama/işletim sistemi/kütüphane sürümleri, ışık sayısı, her ışığın
 kategorisi ve ürün adı, son hata ve günlük satırları. Yerel anahtar, cihaz kimliği, uuid, MAC adresi,
 Access ID/Secret ve ışıklara verdiğiniz adlar rapora girmez; son satırlar yazılırken bilinen tüm
-değerler ve MAC/GUID/uzun hex kalıpları ayrıca maskelenir (bkz. privacy.py).
+değerler ve MAC/GUID/uzun hex kalıpları ayrıca maskelenir (bkz. privacy.py). Günlük dosyasının (applog.py)
+son satırları da girer.
 Rapor bakımcıların okuması içindir, bu yüzden her zaman İngilizcedir.
 """
 
@@ -88,6 +89,7 @@ def build_report(
     connected: bool | None = None,
     bluetooth: str = "",
     extra_secrets: Iterable[str] = (),
+    file_log: Iterable[str] = (),
 ) -> str:
     lights = list(lights)
     events = events or RecentEvents()
@@ -103,6 +105,8 @@ def build_report(
     lines += [f"- {e}" for e in events.errors] or ["- none"]
     lines += ["", "### Recent log lines (oldest first)", "```"]
     lines += list(events.log) or ["(empty)"]
+    lines += ["```", "", "### Log file: last lines of app.log (oldest first)", "```"]
+    lines += list(file_log) or ["(empty)"]
     lines += ["```"]
     # Son güvenlik ağı: bilinen tüm gizli değerler ve MAC/GUID/hex kalıpları tüm rapordan maskelenir.
     return redact("\n".join(lines), [*known_secrets(lights), *extra_secrets])

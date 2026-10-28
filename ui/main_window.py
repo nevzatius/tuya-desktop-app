@@ -24,7 +24,9 @@ from PySide6.QtWidgets import (
 )
 
 import asyncio
+import logging
 
+import applog
 import diagnostics as diag
 import i18n
 import light_core as lc
@@ -44,6 +46,7 @@ from .workers import Worker
 
 PAGE_WHITE, PAGE_COLOUR = 0, 1
 ISSUES_URL = f"{APP_URL}/issues/new/choose"
+LOGGER = logging.getLogger("tuya_light.ui")
 
 
 def default_bluetooth_check() -> str:
@@ -160,6 +163,7 @@ class MainWindow(QMainWindow):
     def notice(self, text: str) -> None:
         """Pencere kapalı olsa da görünen kısa bildirim: tepsi balonu, tepsi yoksa hata bandı."""
         self.events.add_log(text)
+        LOGGER.info("notice: %s", text)
         if self._tray is not None:
             self._tray.notify(APP_NAME, text)
         else:
@@ -594,6 +598,7 @@ class MainWindow(QMainWindow):
         self.banner.setText(text)
         self.banner.show()
         self.events.add_error(text)
+        LOGGER.error("%s", text)
         self._on_log("ERROR: " + text)
 
     def _on_log(self, text: str) -> None:
@@ -643,6 +648,7 @@ class MainWindow(QMainWindow):
             language_setting=str(self._settings.value(i18n.SETTINGS_KEY, i18n.AUTO)),
             connected=self._connected,
             bluetooth=self._bt_state,
+            file_log=applog.tail(secrets=diag.known_secrets(self._devices_list)),
         )
 
     def copy_report(self) -> None:

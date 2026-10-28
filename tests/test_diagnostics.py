@@ -346,3 +346,26 @@ def test_settings_menu_has_report_actions(win):
     window.report_problem_action.trigger()
     assert window.opened[-1].endswith("/issues/new/choose") and window.opened[-1].startswith(version.APP_URL)
     QApplication.clipboard().clear()
+
+
+def test_window_report_includes_the_log_file_tail_without_secrets(win, tmp_path, monkeypatch):
+    import logging
+
+    import applog
+
+    monkeypatch.setattr(applog, "log_path", lambda: tmp_path / "app.log")
+    window, bridge = win
+    light = fake_light()
+    window.set_devices([light], light.device_id)
+    root = logging.getLogger()
+    level = root.level
+    try:
+        applog.setup(secrets=lambda: diag.known_secrets([light]))
+        logging.getLogger("tuya_light.test").info("session for %s key %s mac %s", light.device_id, light.local_key, light.address)
+    finally:
+        applog.shutdown()
+        root.setLevel(level)
+    report = window.build_report()
+    assert "session for" in report and "### Log file" in report
+    for value in (light.local_key, light.device_id, light.uuid, light.address, light.name):
+        assert value not in report

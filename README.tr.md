@@ -155,7 +155,7 @@ TuyaDesktopApp.exe --power off
 - Işıklarınızın yerel anahtarları **yalnızca bu bilgisayarda** saklanır: Windows'ta `%APPDATA%\TuyaDesktopApp\devices.json` (macOS: `~/Library/Application Support/TuyaDesktopApp`, Linux: `~/.config/TuyaDesktopApp`). Dosya şifrelenmez (Linux/macOS'ta yalnızca kullanıcınız okuyabilir). **Paylaşmayın, depoya yüklemeyin.**
 - **Access Secret** yalnızca tek seferlik alma işlemi için kullanılır ve hiçbir yere kaydedilmez. Başarılı alımdan sonra, pano hâlâ o secret'ı tutuyorsa uygulama panoyu da temizler.
 - Uygulama hiçbir yere veri göndermez. İnternet yalnızca kurulum sihirbazında Tuya Cloud ile konuşmak için kullanılır.
-- Günlük, hata mesajları ve tanılama raporunda yerel anahtar, cihaz kimliği, UUID, Bluetooth adresi ve ışık adları maskelenir.
+- Günlük, hata mesajları ve tanılama raporunda yerel anahtar, cihaz kimliği, UUID, Bluetooth adresi ve ışık adları maskelenir. Uygulama veri klasöründe dönen bir günlük tutar (`app.log`, her biri yaklaşık 1 MB üç dosya); her satır yazılmadan önce maskelenir ve tanılama raporu bunun son satırlarını içerir.
 - Bir ışığın yerel anahtarını bilen ve Bluetooth menzilinde olan biri o ışığı kontrol edebilir.
 - Kaldırırken ışıklarınız ve enerji geçmişiniz, silmeyi seçmedikçe korunur.
 - Eski bir sürümden (veri klasörü `OdamdakiIsik`) geçiyorsanız ışıklarınız ve enerji geçmişiniz ilk açılışta otomatik taşınır.
