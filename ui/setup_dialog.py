@@ -11,7 +11,8 @@ from __future__ import annotations
 
 import asyncio
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
+from functools import partial
 from typing import Any
 
 from PySide6.QtCore import QLocale, QRectF, Qt, QUrl, Signal
@@ -36,6 +37,7 @@ from PySide6.QtWidgets import (
 import cloud_import as ci
 import light_core as lc
 from i18n import tr
+from privacy import redact
 
 from .icons import app_icon
 from .theme import BORDER, DANGER, OK
@@ -69,10 +71,11 @@ def signal_text(rssi: int | None) -> str:
     return tr("setup.signal_good") if rssi >= -75 else tr("setup.signal_weak")
 
 
-def _explain_cloud(exc: Exception) -> tuple[str, str]:
+def _explain_cloud(exc: Exception, secrets: Iterable[str] = ()) -> tuple[str, str]:
+    """Hata metni ekrana gelmeden önce maskelenir: girilen Access ID/Secret (`secrets`) ve MAC/GUID/uzun hex kalıpları."""
     if isinstance(exc, ci.CloudError):
-        return str(exc), exc.kind
-    return tr("error.unexpected", error=exc), "other"
+        return redact(exc, secrets), exc.kind
+    return tr("error.unexpected", error=redact(exc, secrets)), "other"
 
 
 def _explain_scan(exc: Exception) -> tuple[str, str]:
@@ -511,7 +514,7 @@ class SetupDialog(QDialog):
         self._show_cloud_message(tr("setup.connecting"))
         self.find_button.setEnabled(False)
         self._submitted_secret = secret
-        worker = _Worker(self._fetcher, (access_id, secret, self.selected_region()), _explain_cloud)
+        worker = _Worker(self._fetcher, (access_id, secret, self.selected_region()), partial(_explain_cloud, secrets=(access_id, secret)))
         worker.done.connect(self._fetch_done)
         worker.failed.connect(self._fetch_failed)
         worker.finished.connect(self._worker_finished)
@@ -522,7 +525,11 @@ class SetupDialog(QDialog):
         self._worker = None
         self.find_button.setEnabled(True)
 
+    def _forget_secret(self) -> None:
+        self._submitted_secret = ""
+
     def _fetch_failed(self, message: str, kind: str = "other") -> None:
+        self._forget_secret()  # tekrar denenirse _start_fetch yeniden kaydeder; alanda kalan değer kullanıcı içindir
         self._show_cloud_message(message, bad=True)
         self.retry_button.show()  # çözüm: düzeltip tekrar dene
         self.open_tuya_button.setVisible(kind in ("credentials", "permission", "token", "no_devices"))
@@ -533,7 +540,7 @@ class SetupDialog(QDialog):
         clipboard = QApplication.clipboard()
         if self._submitted_secret and clipboard.text().strip() == self._submitted_secret:
             clipboard.clear()  # panoda kalan Secret'i de temizle
-        self._submitted_secret = ""
+        self._forget_secret()
         self.paste_note.hide()
         self._show_cloud_message("")
         self._populate(list(found))
@@ -769,4 +776,9 @@ class SetupDialog(QDialog):
         if self.stack.currentIndex() == PAGE_DONE and self._added:
             self.accept()
             return
+        typed = self.secret.text().strip()
+        clipboard = QApplication.clipboard()
+        if typed and clipboard.text().strip() in (typed, self._submitted_secret):
+            clipboard.clear()  # vazgeçilince panoda Secret kalmasın (başarıdaki temizlikle aynı)
+        self._forget_secret()
         super().reject()

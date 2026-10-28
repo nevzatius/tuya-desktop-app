@@ -66,7 +66,12 @@ def collect_versions() -> dict[str, str]:
 
 
 def known_secrets(lights: Iterable[lc.Config]) -> list[str]:
-    """Rapora hiçbir koşulda girmemesi gereken tüm değerler."""
+    """Rapora hiçbir koşulda girmemesi gereken tüm değerler.
+
+    Access ID/Secret burada YOK: kaydedilmezler, yalnızca kurulum sihirbazı açıkken bellekte durur ve ne günlüğe ne rapora
+    yazılır. Sihirbaz hata metnini kendisi maskeler (`setup_dialog._explain_cloud`); kalıcı bir değer olmadıkları için
+    genel (global) bir "geçici gizli değer" listesi eklenmedi.
+    """
     secrets: list[str] = []
     for cfg in lights:
         secrets += [cfg.local_key, cfg.device_id, cfg.uuid, cfg.address, cfg.name]

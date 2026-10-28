@@ -362,3 +362,82 @@ def test_cloud_error_kinds():
     with pytest.raises(ci.CloudError) as info:
         ci.connect(ID, SECRET, "eu", lambda **kw: SimpleNamespace(error="sign invalid"))
     assert info.value.kind == "credentials"
+
+
+# -- gizli bilgi: hata metni ve bellekte kalan Secret ---------------------------------------------
+
+
+MAC = "AA:BB:CC:DD:EE:FF"
+
+
+def test_unexpected_error_text_is_redacted_before_it_reaches_the_screen(qapp):
+    def boom(a, s, r):
+        raise RuntimeError(f"istek reddedildi: id={a} secret={s} cihaz={MAC}")
+
+    d = make_dialog(boom)
+    d.stack.setCurrentIndex(PAGE_CREDENTIALS)
+    fill(d)
+    d.find_button.click()
+    assert wait_for(lambda: "istek reddedildi" in d.cloud_message.text())
+    text = d.cloud_message.text()
+    assert ID not in text and SECRET not in text and MAC not in text and "<hidden>" in text
+
+
+def test_cloud_error_text_is_redacted_too(qapp):
+    def refuse(a, s, r):
+        raise ci.CloudError(f"Tuya şunu döndürdü: {s}", "other")
+
+    d = make_dialog(refuse)
+    d.stack.setCurrentIndex(PAGE_CREDENTIALS)
+    fill(d)
+    d.find_button.click()
+    assert wait_for(lambda: "Tuya şunu döndürdü" in d.cloud_message.text())
+    assert SECRET not in d.cloud_message.text() and "<hidden>" in d.cloud_message.text()
+
+
+def test_redaction_helper_masks_known_values_and_patterns_but_keeps_ordinary_errors():
+    from ui.setup_dialog import _explain_cloud
+
+    message, kind = _explain_cloud(ci.CloudError("İnternete ulaşılamadı", "network"))
+    assert (message, kind) == ("İnternete ulaşılamadı", "network")  # sıradan mesaj bozulmaz
+    message, kind = _explain_cloud(ValueError(f"{SECRET} {MAC}"), (ID, SECRET))
+    assert SECRET not in message and MAC not in message and kind == "other"
+    assert ID not in _explain_cloud(ValueError(f"id {ID}"), (ID, SECRET))[0]
+
+
+def test_submitted_secret_is_forgotten_on_failure_and_set_again_on_retry(qapp):
+    attempts = []
+
+    def flaky(a, s, r):
+        attempts.append(1)
+        if len(attempts) == 1:
+            raise ci.CloudError("Access ID veya Secret yanlış", "credentials")
+        return [found(1)], r
+
+    d = make_dialog(flaky)
+    d.stack.setCurrentIndex(PAGE_CREDENTIALS)
+    fill(d)
+    d.find_button.click()
+    assert wait_for(lambda: "yanlış" in d.cloud_message.text()) and wait_for(lambda: d.find_button.isEnabled())
+    assert d._submitted_secret == ""  # hatada temizlendi
+    assert d.secret.text() == SECRET  # alan, düzeltip tekrar denemek için duruyor
+    d.retry_button.click()
+    assert wait_for(lambda: d.stack.currentIndex() == PAGE_LIGHTS) and d._submitted_secret == ""
+
+
+def test_cancelling_forgets_the_secret_and_clears_a_matching_clipboard(qapp):
+    d = make_dialog()
+    d.stack.setCurrentIndex(PAGE_CREDENTIALS)
+    fill(d)
+    d._submitted_secret = SECRET
+    QApplication.clipboard().setText(SECRET)
+    d.cancel_button.click()
+    assert d.result() == QDialog.DialogCode.Rejected and d._submitted_secret == ""
+    assert QApplication.clipboard().text() == ""
+    other = make_dialog()
+    other.stack.setCurrentIndex(PAGE_CREDENTIALS)
+    fill(other)
+    QApplication.clipboard().setText("başka bir şey")
+    other.reject()
+    assert QApplication.clipboard().text() == "başka bir şey"  # alakasız pano içeriğine dokunulmaz
+    QApplication.clipboard().clear()
