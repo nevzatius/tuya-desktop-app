@@ -9,6 +9,8 @@ from PySide6.QtWidgets import QInputDialog, QMessageBox, QWidget
 
 import devices as dv
 import light_core as lc
+from i18n import tr
+from version import APP_NAME
 
 from .setup_dialog import SetupDialog
 
@@ -72,14 +74,14 @@ class AppController(QObject):
 
     @staticmethod
     def _default_confirm(parent: QWidget, text: str) -> bool:
-        box = QMessageBox(QMessageBox.Icon.Question, "Odamdaki Işık", text, QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, parent)
-        box.button(QMessageBox.StandardButton.Yes).setText("Kaldır")
-        box.button(QMessageBox.StandardButton.No).setText("Vazgeç")
+        box = QMessageBox(QMessageBox.Icon.Question, APP_NAME, text, QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, parent)
+        box.button(QMessageBox.StandardButton.Yes).setText(tr("controller.remove"))
+        box.button(QMessageBox.StandardButton.No).setText(tr("controller.cancel"))
         return box.exec() == QMessageBox.StandardButton.Yes
 
     @staticmethod
     def _default_ask_name(parent: QWidget, current: str) -> str | None:
-        text, ok = QInputDialog.getText(parent, "Adını değiştir", "Işığın adı:", text=current)
+        text, ok = QInputDialog.getText(parent, tr("controller.rename_title"), tr("controller.rename_label"), text=current)
         return text if ok else None
 
     def refresh_menu(self) -> None:
@@ -123,7 +125,7 @@ class AppController(QObject):
 
     def remove(self) -> None:
         cfg = self.store.current()
-        if cfg is None or not self._confirm(self.window, f"“{cfg.name}” kaldırılsın mı? Anahtarı bu bilgisayardan silinir (ışığın kendisine dokunulmaz)."):
+        if cfg is None or not self._confirm(self.window, tr("controller.remove_confirm", name=cfg.name)):
             return
         self.store.remove(cfg.device_id)
         self.store.save()

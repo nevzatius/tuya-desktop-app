@@ -120,3 +120,70 @@ def test_connect_cloud_reports_last_error_when_all_fail():
     cloud, error = gc.connect_cloud(fake, "i" * 20, "s" * 32, "eu", ID)
     assert cloud is None and "sign invalid" in error
     assert fake.tried[0] == "eu" and set(fake.tried) == set(gc.REGIONS)
+
+
+# -- çıktı: uygulamanın okuduğu veri klasörü ---------------------------------------------------------------
+
+
+def make_cfg(device_id: str = ID, key: str = "K" * 16) -> lc.Config:
+    return lc.Config(device_id=device_id, local_key=key, uuid="u" * 16, name="Işık")
+
+
+def test_save_config_writes_to_the_user_data_folder_not_next_to_the_app(_isolated_world):
+    import devices as dv
+
+    saved = gc.save_config(make_cfg())
+    assert saved == dv.user_data_dir() / "devices.json" and saved.is_relative_to(_isolated_world)
+    assert dv.DeviceStore.load().current().device_id == ID
+    assert not lc.CONFIG_PATH.exists()  # eski config.json yazılmaz
+
+
+def test_save_config_adds_to_existing_lights_and_updates_the_same_device(tmp_path):
+    import devices as dv
+
+    path = tmp_path / "devices.json"
+    gc.save_config(make_cfg("devA"), path)
+    gc.save_config(make_cfg("devB"), path)
+    gc.save_config(make_cfg("devA", key="N" * 16), path)  # yeniden eşleşme: anahtar güncellenir
+    store = dv.DeviceStore.load(path)
+    assert [c.device_id for c in store.devices()] == ["devA", "devB"] and store.get("devA").local_key == "N" * 16
+    assert store.selected == "devA"
+
+
+def test_save_config_refuses_to_overwrite_a_damaged_file(tmp_path):
+    path = tmp_path / "devices.json"
+    path.write_text("{bozuk", encoding="utf-8")
+    with pytest.raises(RuntimeError):
+        gc.save_config(make_cfg(), path)
+    assert path.read_text(encoding="utf-8") == "{bozuk"  # dosya olduğu gibi kaldı; yedeği de alındı
+    assert list(tmp_path.glob("devices.json.bad-*"))
+
+
+def test_cli_end_to_end_saves_to_devices_json_and_only_suggests_deleting_the_old_config(monkeypatch, capsys, _isolated_world):
+    import devices as dv
+
+    legacy = lc.CONFIG_PATH
+    legacy.write_text("{}", encoding="utf-8")  # yalıtılmış geçici yol: gerçek config.json'a dokunulmaz
+    entry = {"id": ID, "key": "K" * 16, "uuid": "u" * 16, "name": "Işık", "mac": "AA:BB"}
+
+    class FakeTuya:
+        class Cloud:
+            def __init__(self, **_kwargs):
+                self.error = None
+
+            def getdevices(self):
+                return [entry]
+
+            def cloudrequest(self, *_a, **_k):
+                return {"success": False}
+
+    answers = iter(["i" * 20, "eu", ID])
+    monkeypatch.setitem(sys.modules, "tinytuya", FakeTuya)
+    monkeypatch.setattr("builtins.input", lambda *_a: next(answers))
+    monkeypatch.setattr(gc.getpass, "getpass", lambda *_a: "s" * 32)
+    assert gc.main() == 0
+    out = capsys.readouterr().out
+    assert str(dv.user_data_dir() / "devices.json") in out
+    assert "silmenizi öneririz" in out and "kendiliğinden silinmez" in out
+    assert legacy.exists() and legacy.read_text(encoding="utf-8") == "{}"  # otomatik silme yok
+    assert dv.DeviceStore.load().current().device_id == ID

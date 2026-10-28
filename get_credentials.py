@@ -1,4 +1,4 @@
-"""Tuya Cloud'dan ışığın bilgilerini alıp config.json'a yazar.
+"""Tuya Cloud'dan ışığın bilgilerini alıp uygulamanın veri klasörüne (devices.json) ekler.
 
 Bluetooth bağlantısı için üç şey gerekir: cihaz kimliği, yerel anahtar (local_key)
 ve uuid. Bunları sadece Tuya hesabınız (Cloud projesi) verebilir.
@@ -6,7 +6,8 @@ ve uuid. Bunları sadece Tuya hesabınız (Cloud projesi) verebilir.
     python get_credentials.py
 
 Access Secret'ı yalnızca bu komut çalışırken bellekte tutulur, hiçbir yere kaydedilmez.
-Oluşan config.json içinde yerel anahtar vardır: paylaşmayın.
+Kayıt, uygulamanın okuduğu yere (%APPDATA%\\TuyaDesktopApp\\devices.json) yazılır; içinde yerel anahtar vardır: paylaşmayın.
+Uygulamanın yanındaki eski config.json artık okunmaz (yalnızca ilk açılışta içe aktarılır); silmeyi önerir, kendiliğinden silmez.
 """
 
 from __future__ import annotations
@@ -14,8 +15,10 @@ from __future__ import annotations
 import getpass
 import re
 import sys
+from pathlib import Path
 from typing import Any
 
+import devices as dv
 import light_core as lc
 
 DEFAULT_ACCESS_ID = ""
@@ -63,6 +66,20 @@ def fetch_config(cloud: Any, device_id: str) -> lc.Config:
             dps[code] = dp_id
 
     return lc.Config(device_id=device_id, local_key=local_key, uuid=uuid, name=name, address=mac, dps=dps)
+
+
+def save_config(cfg: lc.Config, store_path: Path | None = None) -> Path:
+    """Işığı veri klasöründeki devices.json'a ekler (aynı cihaz varsa günceller); dosyanın yolunu döndürür.
+
+    Mevcut dosya bozuksa dokunulmaz: `DeviceStore.load` yedeğini alıp boş başlar, üzerine yazmak diğer ışıkları
+    ana dosyadan düşürürdü; bu yüzden hata verilir.
+    """
+    store = dv.DeviceStore.load(store_path)
+    if store.problem:
+        raise RuntimeError(f"{store.path} okunamadı ya da bozuk (yedeği alındı); önce uygulamayı açıp dosyayı onarın ya da silin.")
+    store.add(cfg)
+    store.save()
+    return store.path
 
 
 def ask(prompt: str, default: str = "") -> str:
@@ -134,13 +151,19 @@ def main() -> int:
         print(exc)
         return 1
 
-    cfg.save()
-    print(f"\nKaydedildi: {lc.CONFIG_PATH}")
+    try:
+        saved = save_config(cfg)
+    except (RuntimeError, OSError) as exc:
+        print(exc)
+        return 1
+    print(f"\nKaydedildi: {saved}")
     print(f"  cihaz   : {cfg.name} ({cfg.device_id})")
     print(f"  uuid    : {cfg.uuid or '(alınamadı)'}")
     print(f"  DP'ler  : {cfg.dps}")
     if not cfg.uuid:
-        print("\nuuid alınamadı. `python app.py scan` çıktısındaki uuid'yi config.json içine elle yazın.")
+        print("\nuuid alınamadı. `python app.py scan` çıktısındaki uuid'yi devices.json içindeki ışık kaydına (uuid) elle yazın.")
+    if lc.CONFIG_PATH.exists():
+        print(f"\nNot: {lc.CONFIG_PATH} artık okunmuyor ve eski anahtarı içeriyor. Güvenliğiniz için silmenizi öneririz (kendiliğinden silinmez).")
     print("\nSonraki adım: python app.py scan")
     return 0
 

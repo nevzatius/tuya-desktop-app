@@ -150,7 +150,7 @@ def test_dst_free_day_edges_cover_whole_day(log):
 
 
 def test_formatting():
-    assert en.fmt_tl(1234.5) == "₺1.234,50" and en.fmt_tl(0) == "₺0,00"
+    assert en.fmt_money(1234.5) == "₺1.234,50" and en.fmt_money(0) == "₺0,00"
     assert en.fmt_kwh(0.0456) == "0,046 kWh" and en.fmt_kwh(12.5) == "12,50 kWh"
     assert en.fmt_duration(0) == "0 dk" and en.fmt_duration(3600) == "1 sa" and en.fmt_duration(5400) == "1 sa 30 dk"
 

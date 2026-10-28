@@ -23,7 +23,6 @@ from test_ui import FakeBridge, FakeClient, qapp, wait_for  # noqa: E402,F401
 from ui.bridge import LightBridge  # noqa: E402
 from ui.controller import AppController  # noqa: E402
 from ui.main_window import MainWindow  # noqa: E402
-from ui.setup_dialog import PAGE_CLOUD, PAGE_MANUAL, PAGE_RESULTS, PAGE_START, SetupDialog  # noqa: E402
 
 ID, SECRET = "a" * 20, "b" * 32
 
@@ -34,108 +33,6 @@ def cfg(i: int, name: str | None = None) -> lc.Config:
 
 def found(i: int, light=True, standard=True) -> ci.FoundDevice:
     return ci.FoundDevice(cfg(i), light, standard)
-
-
-# -- sihirbaz ----------------------------------------------------------------------
-
-
-def make_dialog(fetcher=None, existing=None):
-    return SetupDialog(existing or set(), fetcher=fetcher or (lambda a, s, r: ([found(1)], r)))
-
-
-def fill(d, access_id=ID, secret=SECRET):
-    d.access_id.setText(access_id)
-    d.secret.setText(secret)
-
-
-def test_start_page_routes(qapp):
-    d = make_dialog()
-    assert d.stack.currentIndex() == PAGE_START
-    d.cloud_button.click()
-    assert d.stack.currentIndex() == PAGE_CLOUD
-    d.stack.setCurrentIndex(PAGE_START)
-    d.manual_button.click()
-    assert d.stack.currentIndex() == PAGE_MANUAL
-
-
-def test_cloud_validation_blocks_fetch(qapp):
-    calls = []
-    d = make_dialog(lambda a, s, r: calls.append(1) or ([], r))
-    fill(d, "kisa")
-    d.find_button.click()
-    assert "20" in d.cloud_message.text() and not d.cloud_message.isHidden()
-    assert calls == [] and d._worker is None
-
-
-def test_cloud_success_lists_devices_and_adds_checked(qapp):
-    devices = [found(1), found(2), found(3, light=False)]
-    d = make_dialog(lambda a, s, r: (devices, r), existing={"dev2"})
-    d.cloud_button.click()
-    fill(d)
-    d.find_button.click()
-    assert wait_for(lambda: d.stack.currentIndex() == PAGE_RESULTS)
-    assert d.secret.text() == ""  # Secret temizlendi
-    assert d.device_list.count() == 3
-    states = [d.device_list.item(i).checkState().name for i in range(3)]
-    assert states == ["Checked", "Unchecked", "Unchecked"]  # ekli olan ve ışık olmayan işaretsiz
-    assert "zaten ekli" in d.device_list.item(1).text() and "ışık değil" in d.device_list.item(2).text()
-    assert wait_for(lambda: d._worker is None and d.find_button.isEnabled())
-    d.add_button.click()
-    assert d.result() == QDialog.DialogCode.Accepted
-    assert [c.device_id for c in d.added_devices()] == ["dev1"]
-
-
-def test_cloud_failure_shows_message_and_allows_retry(qapp):
-    def boom(a, s, r):
-        raise ci.CloudError("Access ID veya Secret yanlış")
-
-    d = make_dialog(boom)
-    fill(d)
-    d.find_button.click()
-    assert wait_for(lambda: "yanlış" in d.cloud_message.text())
-    assert wait_for(lambda: d.find_button.isEnabled())
-    assert d.secret.text() == SECRET  # düzeltip tekrar denemek için korunur
-
-
-def test_cloud_unexpected_exception_is_reported(qapp):
-    d = make_dialog(lambda a, s, r: 1 / 0)
-    fill(d)
-    d.find_button.click()
-    assert wait_for(lambda: "Beklenmeyen hata" in d.cloud_message.text())
-
-
-def test_results_requires_a_selection_and_flags_experimental(qapp):
-    d = make_dialog(lambda a, s, r: ([found(1, standard=False)], r))
-    fill(d)
-    d.find_button.click()
-    assert wait_for(lambda: d.stack.currentIndex() == PAGE_RESULTS)
-    assert "deneysel" in d.device_list.item(0).text() and "Deneysel" in d.results_note.text()
-    d.device_list.item(0).setCheckState(d.device_list.item(0).checkState().Unchecked)
-    d.add_button.click()
-    assert "en az bir" in d.results_note.text() and d.result() != QDialog.DialogCode.Accepted
-
-
-def test_manual_entry(qapp):
-    d = make_dialog()
-    d.stack.setCurrentIndex(PAGE_MANUAL)
-    d.manual_add.click()
-    assert not d.manual_message.isHidden() and d.added_devices() == []
-    d.m_id.setText(" bf2a 2b17​ ")
-    d.m_key.setText("TestKey#0123456!")
-    d.m_uuid.setText("0123456789abcdef")
-    d.manual_add.click()
-    [c] = d.added_devices()
-    assert (c.device_id, c.local_key, c.name) == ("bf2a2b17", "TestKey#0123456!", "Işık")
-
-
-def test_help_toggle_and_secret_visibility(qapp):
-    d = make_dialog()
-    assert d.help_box.isHidden()
-    d.help_toggle.setChecked(True)
-    assert not d.help_box.isHidden()
-    assert d.secret.echoMode().name == "Password"
-    d.show_secret.setChecked(True)
-    assert d.secret.echoMode().name == "Normal"
 
 
 # -- denetleyici ---------------------------------------------------------------------

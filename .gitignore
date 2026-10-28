@@ -13,5 +13,15 @@ __pycache__/
 .pytest_cache/
 build/
 dist/
+dist-installer/
 *.spec
 *.egg-info/
+*.bak
+
+# Kullanıcı verisi (normalde veri klasöründe durur; yanlışlıkla eklenmesin)
+presets.json
+automations.json
+automation_state.json
+*.bad-*
+*.log
+*.log.[0-9]

@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import logging
 import threading
 from collections.abc import Awaitable, Callable
@@ -30,7 +31,8 @@ Factory = Callable[[], Awaitable[None]]
 class LightBridge(QObject):
     state = Signal(object)  # light_core.LightState
     status = Signal(str)  # "Bağlı", "Işık aranıyor…" ...
-    error = Signal(str)  # kullanıcıya gösterilecek Türkçe hata
+    error = Signal(str)  # kullanıcıya gösterilecek (çevrilmiş) hata
+    problem = Signal(str)  # hatanın türü (light_core.error_kind): arayüz buna göre çözüm önerir; `error`dan sonra gelir
     log = Signal(str)
     connectedChanged = Signal(bool)
 
@@ -99,7 +101,7 @@ class LightBridge(QObject):
         try:
             asyncio.run_coroutine_threadsafe(self._client.close(), self._loop).result(timeout=5)
         except Exception:  # noqa: BLE001 - kapanırken hata önemsiz
-            LOGGER.debug("kapatma hatası", exc_info=True)
+            LOGGER.debug("close error", exc_info=True)
         self._loop.call_soon_threadsafe(self._loop.stop)
         self._thread.join(timeout=3)
 
@@ -114,6 +116,7 @@ class LightBridge(QObject):
         if isinstance(exc, TuyaBleAuthenticationError):
             self._fatal = True
         self.error.emit(lc.friendly_error(exc))
+        self.problem.emit(lc.error_kind(exc))
         self._set_connected(bool(self._client.connected))
 
     async def _guard(self, coro: Awaitable[None]) -> None:
@@ -163,8 +166,10 @@ class LightBridge(QObject):
                 except TuyaBleAuthenticationError as exc:
                     self._fatal = True
                     self.error.emit(lc.friendly_error(exc))
+                    self.problem.emit(lc.error_kind(exc))
                 except Exception as exc:  # noqa: BLE001
                     self.error.emit(lc.friendly_error(exc))
+                    self.problem.emit(lc.error_kind(exc))
                     delay = min(delay * 1.6, 45.0)
             await asyncio.sleep(delay)
 
@@ -191,6 +196,18 @@ class LightBridge(QObject):
             dps = lc.cmd_power(cfg, True) + lc.cmd_colour(cfg, preset.hue, preset.sat, lc.pct_to_bright(preset.bright))
         self._latest("light", lambda: self._client.send(dps))
 
+    def execute(self, operation: Callable[[Any], Awaitable[Any]]) -> concurrent.futures.Future:
+        """`operation(istemci)`'yi BLE iş parçacığında, seçili ışığın istemcisiyle çalıştırır (otomasyonlar için).
+
+        Sonuç ya da hata çağırana döner; arayüze hata bandı/sinyal göndermez (çağıran yeniden dener ya da bildirir).
+        Komut normal yoldan gittiği için enerji kaydı ve ekran durumu da güncellenir.
+        """
+
+        async def run() -> Any:
+            return await operation(self._client)
+
+        return asyncio.run_coroutine_threadsafe(run(), self._loop)
+
     def set_device(self, cfg: lc.Config) -> None:
         """Başka bir ışığa geç: eski bağlantıyı kapat, bekleyen komutları at, yenisine bağlan."""
         if self._thread.is_alive():
@@ -216,7 +233,7 @@ class LightBridge(QObject):
         try:
             await old.close()
         except Exception:  # noqa: BLE001
-            LOGGER.debug("eski bağlantı kapatılamadı", exc_info=True)
+            LOGGER.debug("could not close the previous connection", exc_info=True)
 
     def refresh(self) -> None:
         self._submit(self._client.refresh())

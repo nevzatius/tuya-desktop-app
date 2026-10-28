@@ -1,0 +1,54 @@
+name: Bug report / Hata bildirimi
+description: Something does not work (English or Türkçe is fine)
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping! / Teşekkürler!
+        **Never paste local keys, Access Secret, device IDs or Bluetooth addresses.** The diagnostic report below is built to exclude them.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened? / Ne oldu?
+      description: What did you do, what did you expect, what happened instead?
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where does it go wrong? / Sorun nerede?
+      options:
+        - Setup wizard (getting the key from Tuya Cloud)
+        - Finding / connecting to the light (Bluetooth)
+        - Controls (on/off, brightness, colour)
+        - Blink button (experimental)
+        - Troubleshooter card (experimental)
+        - Energy tab
+        - Installer / uninstall
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Light model or Tuya category / Işık modeli ya da kategorisi
+      placeholder: "e.g. YX-ZNLD9 (dj)"
+  - type: textarea
+    id: report
+    attributes:
+      label: Diagnostic report / Tanılama raporu
+      description: |
+        In the app: ⚙ (Settings) → **Copy diagnostic report**, then paste it here. / Uygulamada: ⚙ (Ayarlar) → **Tanılama raporunu kopyala**, sonra buraya yapıştırın.
+        It has no keys, IDs or addresses, but please skim it before posting. / Anahtar, kimlik ve adres içermez; yine de göndermeden önce göz atın.
+      render: markdown
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before posting / Göndermeden önce
+      options:
+        - label: The Smart Life app on my phone is closed or its Bluetooth is off. / Telefondaki Smart Life kapalı ya da Bluetooth'u kapalı.
+        - label: I did not paste any key, secret, device ID or address. / Hiçbir anahtar, secret, cihaz kimliği ya da adres yapıştırmadım.
+          required: true

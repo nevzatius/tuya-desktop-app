@@ -17,11 +17,19 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import light_core as lc
+from i18n import format_number, language, tr
+from i18n import currency_symbol as _currency_symbol
 
 # EPDK mesken tarifesi, 4 Nisan 2026, kademe 1 (aylık 240 kWh'e kadar): 2,92 TL/kWh (KDV/BTV hariç).
 # KDV %10 ve BTV %5 ile ≈ 3,37 TL/kWh. Tarifeler her çeyrekte değişebilir: kullanıcı kendi faturasındaki değeri girer.
 DEFAULT_PRICE_TL = 3.37
-PRICE_NOTE = "EPDK mesken tarifesi (Nisan 2026, kademe 1, KDV ve BTV dahil) ≈ 3,37 TL/kWh. Güncel fiyat için faturanıza bakın."
+
+
+def default_price() -> float:
+    """Dile göre varsayılan birim fiyat: yalnızca Türkçede EPDK tarifesi; diğer dillerde 0 (kullanıcı girer)."""
+    return DEFAULT_PRICE_TL if language() == "tr" else 0.0
+
+
 MIN_FRACTION = 0.05  # LED sürücüsü kısık parlaklıkta bile bir miktar çeker
 EPSILON_W = 0.05
 
@@ -45,7 +53,7 @@ def kwh(watts: float, seconds: float) -> float:
 
 @dataclass
 class Bucket:
-    label: str  # eksen etiketi ("14", "Pzt", "27")
+    label: str  # eksen etiketi ("14", "Mon"/"Pzt", "27")
     start: float
     end: float
     kwh: float = 0.0
@@ -148,7 +156,6 @@ class EnergyLog:
 
 # -- dönemler (yerel saate göre) -------------------------------------------------
 
-TR_DAYS = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"]
 PERIODS = ("day", "week", "month")
 
 
@@ -167,7 +174,7 @@ def period_edges(period: str, now: float) -> tuple[float, float, list[tuple[str,
     edges = []
     for i in range(days):
         day = first + timedelta(days=i)
-        label = TR_DAYS[day.weekday()] if days == 7 else str(day.day)
+        label = tr(f"day.{day.weekday()}") if days == 7 else str(day.day)
         edges.append((label, day.timestamp(), (day + timedelta(days=1)).timestamp()))
     return first.timestamp(), (today + timedelta(days=1)).timestamp(), edges
 
@@ -191,27 +198,29 @@ def summarize(log: EnergyLog, period: str, price_tl: float, device: str | None =
     return Summary(total_kwh, seconds, total_kwh * price_tl, buckets, start, end)
 
 
-# -- biçimlendirme (Türkçe) ----------------------------------------------------------
+# -- biçimlendirme (etkin dile göre) ---------------------------------------------------
 
 
-def fmt_tl(value: float) -> str:
-    text = f"{value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-    return f"₺{text}"
+def fmt_money(value: float, symbol: str | None = None) -> str:
+    """Para tutarı: Türkçe "₺1.234,50", İngilizce "$1,234.50". Sembol verilmezse etkin dile/para birimine göre."""
+    symbol = _currency_symbol() if symbol is None else symbol
+    gap = " " if symbol[-1:].isalpha() else ""
+    return f"{symbol}{gap}{format_number(value, 2)}"
 
 
 def fmt_kwh(value: float) -> str:
     digits = 3 if value < 1 else 2
-    return f"{value:.{digits}f}".replace(".", ",") + " kWh"
+    return f"{format_number(value, digits)} kWh"
 
 
 def fmt_duration(seconds: float) -> str:
     minutes = int(round(seconds / 60))
     hours, minutes = divmod(minutes, 60)
     if hours and minutes:
-        return f"{hours} sa {minutes} dk"
+        return tr("fmt.hours_minutes", hours=hours, minutes=minutes)
     if hours:
-        return f"{hours} sa"
-    return f"{minutes} dk"
+        return tr("fmt.hours", hours=hours)
+    return tr("fmt.minutes", minutes=minutes)
 
 
 class UsageTracker:

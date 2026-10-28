@@ -87,6 +87,26 @@ QDoubleSpinBox {{
 }}
 QDoubleSpinBox:focus {{ border-color: #4c5d85; }}
 QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {{ width: 0px; border: none; }}
+QSpinBox, QTimeEdit {{
+    background: {SURFACE_2}; color: {TEXT}; border: 1px solid {BORDER}; border-radius: 10px; padding: 6px 8px;
+    selection-background-color: #3b4a6b;
+}}
+QSpinBox:focus, QTimeEdit:focus {{ border-color: #4c5d85; }}
+QSpinBox::up-button, QSpinBox::down-button, QTimeEdit::up-button, QTimeEdit::down-button {{ width: 0px; border: none; }}
+QPushButton#day {{
+    background: {SURFACE}; border: 1px solid {BORDER}; border-radius: 9px; padding: 7px 0px; color: {MUTED}; font-weight: 600;
+}}
+QPushButton#day:hover {{ color: {TEXT}; }}
+QPushButton#day:checked {{ background: #8fb4ff; border-color: #8fb4ff; color: #10131a; }}
+QRadioButton {{ color: {TEXT}; spacing: 6px; }}
+QRadioButton::indicator {{ width: 16px; height: 16px; border-radius: 8px; border: 1px solid #4a5368; background: {BG}; }}
+QRadioButton::indicator:checked {{ background: #8fb4ff; border-color: #8fb4ff; }}
+QLabel#note {{ color: {MUTED}; font-size: 12px; }}
+QPushButton#dangerGhost {{
+    background: transparent; border: 1px solid {BORDER}; border-radius: 10px;
+    padding: 6px 12px; color: {DANGER}; font-size: 12px;
+}}
+QPushButton#dangerGhost:hover {{ background: {SURFACE_2}; }}
 QCheckBox {{ color: {MUTED}; spacing: 6px; }}
 QListWidget {{ background: {SURFACE}; border: 1px solid {BORDER}; border-radius: 12px; padding: 6px; outline: none; }}
 QListWidget::item {{ padding: 9px 8px; border-radius: 8px; }}
@@ -107,6 +127,13 @@ QPushButton#deviceBtn {{
 }}
 QPushButton#deviceBtn:hover {{ background: {SURFACE_2}; }}
 QPushButton#deviceBtn::menu-indicator {{ image: none; width: 0px; }}
+
+QPushButton#iconBtn {{
+    background: transparent; border: none; color: {MUTED}; font-size: 16px;
+    padding: 2px 6px; border-radius: 8px;
+}}
+QPushButton#iconBtn:hover {{ background: {SURFACE_2}; color: {TEXT}; }}
+QPushButton#iconBtn::menu-indicator {{ image: none; width: 0px; }}
 
 QPlainTextEdit#log {{
     background: #0a0c10; border: 1px solid {BORDER}; border-radius: 12px; padding: 8px;
