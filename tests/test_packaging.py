@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
 import re
 import shutil
@@ -54,6 +55,33 @@ def test_release_workflow_builds_installer_zip_and_checksums():
     assert workflow.index("build_exe.ps1") < workflow.index("build_installer.ps1") < workflow.index("package_release.ps1")
     package = read("installer/package_release.ps1")
     assert "-Setup-" in package and "-portable-" in package and "SHA256SUMS.txt" in package
+
+
+def test_package_script_writes_checksums_through_the_lf_helper():
+    package = read("installer/package_release.ps1")
+    assert "checksums.ps1" in package and "Write-Sha256Sums" in package
+    assert "Set-Content" not in package  # Set-Content CRLF yazar
+    helper = read("installer/checksums.ps1")
+    assert "UTF8Encoding $false" in helper and "WriteAllText" in helper and "`n" in helper
+
+
+@pytest.mark.skipif(shutil.which("powershell") is None and shutil.which("pwsh") is None, reason="PowerShell yok")
+def test_sha256sums_has_lf_line_endings_no_bom_and_matches_the_files(tmp_path):
+    out = tmp_path / "assets"
+    out.mkdir()
+    files = {"B-portable-1.0.0.zip": b"zip bytes", "A-Setup-1.0.0.exe": b"exe bytes" * 100}
+    for name, data in files.items():
+        (out / name).write_bytes(data)
+    (out / "SHA256SUMS.txt").write_bytes(b"old\r\n")  # yeniden üretimde yok sayılır ve ezilir
+    shell = shutil.which("pwsh") or shutil.which("powershell")
+    command = f'. "{ROOT / "installer" / "checksums.ps1"}"; Write-Sha256Sums "{out}"'
+    done = subprocess.run([shell, "-NoProfile", "-NonInteractive", "-Command", command], capture_output=True, timeout=120)
+    assert done.returncode == 0, done.stderr.decode("utf-8", "replace")
+    raw = (out / "SHA256SUMS.txt").read_bytes()
+    assert not raw.startswith(b"\xef\xbb\xbf") and b"\r" not in raw
+    assert raw.endswith(b"\n") and not raw.endswith(b"\n\n")
+    expected = [f"{hashlib.sha256(files[name]).hexdigest()}  {name}" for name in sorted(files)]  # ad sırasına göre
+    assert raw.decode("ascii").splitlines() == expected
 
 
 def test_release_notes_explain_install_in_both_languages_and_flag_unverified_features():

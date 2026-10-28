@@ -23,8 +23,6 @@ Copy-Item $setup $out
 $zip = "$out\$slug-portable-$version.zip"
 Compress-Archive -Path $folder -DestinationPath $zip
 
-$lines = Get-ChildItem $out -File | Where-Object { $_.Name -ne "SHA256SUMS.txt" } | Sort-Object Name | ForEach-Object {
-    "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $_.Name
-}
-$lines | Set-Content -Encoding ascii "$out\SHA256SUMS.txt"
+. "$PSScriptRoot\checksums.ps1"
+Write-Sha256Sums $out
 Get-ChildItem $out | Format-Table Name, Length -AutoSize
