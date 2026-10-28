@@ -68,6 +68,17 @@ def attach_console(kernel32=None) -> None:
         pass
 
 
+def devices_problem_text(store) -> str:
+    """Işık listesi dosyası bozuksa kullanıcıya gösterilecek açıklama (boşsa sorun yok). Yedek adı verilir, yol değil."""
+    if not store.problem:
+        return ""
+    from i18n import tr
+
+    head = tr("app.devices_recovered" if store.current() is None else "app.devices_partial")
+    backup = tr("app.devices_backup_failed") if store.recovered_from is None else tr("app.devices_backup_kept", backup=store.recovered_from.name)
+    return f"{head}\n\n{backup}"
+
+
 def run_quick(argv: list[str], channel: str | None = None) -> int | None:
     """`--scene "Film"` / `--power on|off`: komutu ÇALIŞAN uygulamaya iletir ve çıkış kodunu döndürür.
 
@@ -162,13 +173,12 @@ def main() -> int:
 
     dv.migrate_legacy_data()  # eski veri klasöründeki anahtarlar ve enerji kaydı yeni klasöre taşınır
 
-    try:
-        store = dv.DeviceStore.load(legacy_config=lc.CONFIG_PATH)
-    except dv.StoreError as exc:
-        QMessageBox.critical(None, APP_NAME, tr("app.store_error", error=exc))
-        return 1
+    store = dv.DeviceStore.load(legacy_config=lc.CONFIG_PATH)  # bozuksa yedeği alınır; açılış çökmez
+    problem_text = devices_problem_text(store)
+    if problem_text:
+        QMessageBox.warning(None, APP_NAME, problem_text)
 
-    if store.current() is None:  # ilk açılış: sihirbaz
+    if store.current() is None:  # ilk açılış (ya da dosya bozuktu): sihirbaz
         dialog = SetupDialog()
         if dialog.exec() != dialog.DialogCode.Accepted or not dialog.added_devices():
             return 0

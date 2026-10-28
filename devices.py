@@ -16,6 +16,7 @@ from dataclasses import asdict
 from pathlib import Path
 
 import light_core as lc
+import storage
 from i18n import tr
 from version import DATA_FOLDER, LEGACY_DATA_FOLDERS
 
@@ -88,30 +89,25 @@ def migrate_legacy_data(new_dir: Path | None = None, legacy_dirs: list[Path] | N
     return moved
 
 
-class StoreError(Exception):
-    """devices.json okunamadı/bozuk."""
-
-
 class DeviceStore:
     def __init__(self, path: Path | None = None) -> None:
         self.path = Path(path) if path else user_data_dir() / "devices.json"
         self._devices: dict[str, lc.Config] = {}
         self.selected: str = ""
+        self.recovered_from: Path | None = None  # dosya bozuksa: yedeğin yolu (yedeklenemediyse None)
+        self.problem = False  # dosya bozuktu ya da bazı kayıtlar atlandı
 
     # -- okuma / yazma ------------------------------------------------------
 
     @classmethod
     def load(cls, path: Path | None = None, legacy_config: Path | None = None) -> DeviceStore:
+        """Bozuk dosya açılışı çökertmez: yedeği alınır, geçerli kayıtlarla (yoksa boş) devam edilir (`problem`)."""
         store = cls(path)
-        if store.path.exists():
-            try:
-                data = json.loads(store.path.read_text(encoding="utf-8"))
-                for item in data.get("devices", []):
-                    cfg = _config_from_dict(item)
-                    store._devices[cfg.device_id] = cfg
-                store.selected = data.get("selected", "")
-            except (OSError, ValueError, KeyError, TypeError) as exc:
-                raise StoreError(tr("error.store_unreadable", path=store.path, error=exc)) from exc
+        data, backup, corrupt = storage.load_json(store.path)
+        if corrupt:
+            store.problem, store.recovered_from = True, backup
+        elif data is not None:
+            store._read(data)
         elif legacy_config is not None and Path(legacy_config).exists():
             try:  # eski tek-ışıklı kurulumdan geçiş
                 store.add(lc.Config.load(Path(legacy_config)))
@@ -121,6 +117,28 @@ class DeviceStore:
         if store.selected not in store._devices:
             store.selected = next(iter(store._devices), "")
         return store
+
+    def _read(self, data: object) -> None:
+        bad = not isinstance(data, dict)
+        items: object = []
+        if not bad:
+            items = data.get("devices", [])  # type: ignore[union-attr]
+            selected = data.get("selected", "")  # type: ignore[union-attr]
+            if isinstance(selected, str):
+                self.selected = selected
+            else:
+                bad = True
+            if not isinstance(items, list):
+                bad, items = True, []
+        for item in items:  # type: ignore[attr-defined]
+            try:
+                cfg = _config_from_dict(item)
+            except storage.PARSE_ERRORS:  # eksik/yanlış tipli cihaz atlanır, diğerleri korunur
+                bad = True
+                continue
+            self._devices[cfg.device_id] = cfg
+        if bad:
+            self.problem, self.recovered_from = True, storage.backup_file(self.path)
 
     def save(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -175,20 +193,39 @@ class DeviceStore:
             self._devices[device_id].name = name.strip()
 
 
-def _config_from_dict(data: dict) -> lc.Config:
-    if not data.get("device_id") or not data.get("local_key"):
-        raise KeyError(tr("error.store_incomplete"))
+def _text(data: dict, key: str, default: str = "") -> str:
+    value = data.get(key, default)
+    if value is None:
+        return default
+    if not isinstance(value, str):
+        raise TypeError(key)
+    return value
+
+
+def _config_from_dict(data: object) -> lc.Config:
+    """Tek cihaz kaydı; eksik ya da yanlış tipliyse ValueError/TypeError (çağıran kaydı atlar)."""
+    if not isinstance(data, dict):
+        raise TypeError("device")
+    device_id, local_key = _text(data, "device_id"), _text(data, "local_key")
+    if not device_id or not local_key:
+        raise ValueError("device_id/local_key missing")
+    raw_dps = data.get("dps")
+    if raw_dps is not None and not isinstance(raw_dps, dict):
+        raise TypeError("dps")
     dps = dict(lc.DEFAULT_DPS)
-    dps.update({k: int(v) for k, v in (data.get("dps") or {}).items()})
+    for key, value in (raw_dps or {}).items():
+        if isinstance(value, bool):
+            raise TypeError("dps")
+        dps[key] = int(value)
     return lc.Config(
-        device_id=data["device_id"],
-        local_key=data["local_key"],
-        uuid=data.get("uuid", ""),
-        name=data.get("name") or tr("device.fallback_name"),
-        address=data.get("address", ""),
+        device_id=device_id,
+        local_key=local_key,
+        uuid=_text(data, "uuid"),
+        name=_text(data, "name") or tr("device.fallback_name"),
+        address=_text(data, "address"),
         dps=dps,
-        colour_type=data.get("colour_type", "string"),
-        category=data.get("category", ""),
-        product_name=data.get("product_name", ""),
+        colour_type=_text(data, "colour_type", "string"),
+        category=_text(data, "category"),
+        product_name=_text(data, "product_name"),
         watts=lc._watts(data.get("watts")),
     )

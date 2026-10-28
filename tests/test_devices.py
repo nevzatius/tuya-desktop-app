@@ -86,14 +86,14 @@ def test_load_imports_legacy_config_once(tmp_path):
     assert dv.DeviceStore.load(path, legacy_config=legacy).selected == "dev7"
 
 
-def test_load_corrupt_file_raises_store_error(tmp_path):
+def test_load_corrupt_file_starts_empty_with_a_backup(tmp_path):
     path = tmp_path / "devices.json"
     path.write_text("{bozuk", encoding="utf-8")
-    with pytest.raises(dv.StoreError):
-        dv.DeviceStore.load(path)
+    store = dv.DeviceStore.load(path)
+    assert len(store) == 0 and store.problem and store.recovered_from.exists()
     path.write_text(json.dumps({"devices": [{"device_id": "a"}]}), encoding="utf-8")
-    with pytest.raises(dv.StoreError):
-        dv.DeviceStore.load(path)
+    store = dv.DeviceStore.load(path)
+    assert len(store) == 0 and store.problem  # eksik alanlı kayıt atlanır (ayrıntılı durumlar: test_corrupt_data.py)
 
 
 def test_load_missing_file_gives_empty_store(tmp_path):

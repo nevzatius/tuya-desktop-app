@@ -3,7 +3,10 @@
 STRINGS: dict[str, str] = {
     # -- app ------------------------------------------------------------------------
     "app.already_running": "The app is already running (check the system tray).",
-    "app.store_error": "{error}\n\nYou can delete the file and reopen the app.",
+    "app.devices_recovered": "The lights file (devices.json) was unreadable or damaged. You can add your lights again with the setup wizard.",
+    "app.devices_partial": "The lights file (devices.json) had damaged entries that were skipped; continuing with the valid lights.",
+    "app.devices_backup_kept": "A backup of the damaged file was kept in the data folder as “{backup}”.",
+    "app.devices_backup_failed": "The file could not be backed up.",
     # -- light names ------------------------------------------------------------------
     "device.default_name": "Room light",
     "device.fallback_name": "Light",
@@ -35,8 +38,6 @@ STRINGS: dict[str, str] = {
     "error.bluetooth": "Bluetooth error: {error}",
     "error.unexpected": "Unexpected error: {error}",
     "error.timeout": "The connection timed out",
-    "error.store_unreadable": "{path} could not be read: {error}",
-    "error.store_incomplete": "device_id/local_key missing",
     # -- Tuya Cloud --------------------------------------------------------------------
     "cloud.no_tinytuya": "tinytuya is not installed. Reinstall the dependencies (pip install -r requirements.txt).",
     "cloud.id_length": "Access ID must be {length} characters (currently {got}).",

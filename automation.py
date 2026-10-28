@@ -391,7 +391,7 @@ class RuleStore:
         for item in items if isinstance(items, list) else []:
             try:
                 rule = Rule.from_dict(item)
-            except RuleError:
+            except storage.PARSE_ERRORS:  # RuleError dahil (ValueError alt sınıfı); yanlış tip ya da dev sayı da atlanır
                 skipped += 1
                 continue
             if rule.id in seen:

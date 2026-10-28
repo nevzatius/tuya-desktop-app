@@ -16,6 +16,10 @@ from typing import Any
 
 LOGGER = logging.getLogger("tuya_light.storage")
 
+# Geçerli JSON ama beklenmeyen biçimde (yanlış tip, aşırı iç içe, dev sayı) veriyi ayrıştırırken çıkabilecek hatalar:
+# kayıt tek tek atlanır, uygulama çökmez.
+PARSE_ERRORS = (ValueError, TypeError, AttributeError, KeyError, OverflowError, RecursionError)
+
 
 def write_json_atomic(path: Path, payload: Any, private: bool = False) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -48,12 +52,16 @@ def backup_file(path: Path) -> Path | None:
 def load_json(path: Path) -> tuple[Any, Path | None, bool]:
     """(veri, yedek yolu, bozuk mu).
 
-    Dosya yoksa (None, None, False). Okunamıyor ya da geçerli JSON değilse yedeği alınır ve (None, yedek, True) döner.
+    Dosya yoksa (None, None, False). Okunamıyor, geçerli JSON değil (ya da kökü `null`) ya da aşırı iç içeyse (RecursionError) yedeği
+    alınır ve (None, yedek, True) döner.
     """
     if not path.exists():
         return None, None, False
     try:
-        return json.loads(path.read_text(encoding="utf-8")), None, False
-    except (OSError, ValueError):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if data is None:  # kök `null`: dosyalarımızın hiçbiri bunu beklemez; "dosya yok"tan ayırt edilsin diye bozuk sayılır
+            raise ValueError("null root")
+        return data, None, False
+    except (OSError, ValueError, RecursionError):
         LOGGER.warning("%s is unreadable; keeping a backup and starting empty", path.name)
         return None, backup_file(path), True

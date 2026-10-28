@@ -3,7 +3,10 @@
 STRINGS: dict[str, str] = {
     # -- uygulama ----------------------------------------------------------------
     "app.already_running": "Uygulama zaten çalışıyor (sistem tepsisine bakın).",
-    "app.store_error": "{error}\n\nDosyayı silip uygulamayı yeniden açabilirsiniz.",
+    "app.devices_recovered": "Işık listesi dosyası (devices.json) okunamadı ya da bozuktu. Işıkları kurulum sihirbazıyla yeniden ekleyebilirsiniz.",
+    "app.devices_partial": "Işık listesi dosyasında (devices.json) bozuk kayıtlar vardı ve atlandı; geçerli ışıklarla devam ediliyor.",
+    "app.devices_backup_kept": "Bozuk dosyanın yedeği veri klasörüne “{backup}” adıyla alındı.",
+    "app.devices_backup_failed": "Dosyanın yedeği alınamadı.",
     # -- ışık adları ---------------------------------------------------------------
     "device.default_name": "Odamdaki ışık",
     "device.fallback_name": "Işık",
@@ -34,8 +37,6 @@ STRINGS: dict[str, str] = {
     "error.bluetooth": "Bluetooth hatası: {error}",
     "error.unexpected": "Beklenmeyen hata: {error}",
     "error.timeout": "Bağlantı zaman aşımına uğradı",
-    "error.store_unreadable": "{path} okunamadı: {error}",
-    "error.store_incomplete": "device_id/local_key eksik",
     # -- Tuya Cloud ------------------------------------------------------------------
     "cloud.no_tinytuya": "tinytuya yüklü değil. Bağımlılıkları yeniden kurun (pip install -r requirements.txt).",
     "cloud.id_length": "Access ID {length} karakter olmalı (şu an {got}).",

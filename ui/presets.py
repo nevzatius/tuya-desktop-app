@@ -133,12 +133,17 @@ class PresetStore:
             return store
         builtin_keys = {p.key for p in PRESETS}
         hidden = data.get("hidden")
+        skipped = 0
         if isinstance(hidden, list):
             store._hidden = {k for k in hidden if isinstance(k, str) and k in builtin_keys}
+        elif hidden is not None:
+            skipped += 1
         items = data.get("presets")
-        skipped = 0
         for item in items if isinstance(items, list) else []:
-            preset = store._parse_item(item)
+            try:
+                preset = store._parse_item(item)
+            except storage.PARSE_ERRORS:
+                preset = None
             if preset is None:
                 skipped += 1
             else:
@@ -150,13 +155,15 @@ class PresetStore:
             for key, combo in hotkeys.items():
                 try:
                     normal = shortcuts.normalise(combo)
-                except (shortcuts.HotkeyError, TypeError):
+                except (shortcuts.HotkeyError, *storage.PARSE_ERRORS):
                     skipped += 1
                     continue
                 if store.get(key) is None or normal in store._hotkeys.values():
                     skipped += 1
                     continue
                 store._hotkeys[key] = normal
+        elif hotkeys is not None:
+            skipped += 1
         if skipped:
             store.problem, store.recovered_from = True, storage.backup_file(store.path)
         return store
@@ -164,8 +171,11 @@ class PresetStore:
     def _parse_item(self, item: object) -> Preset | None:
         if not isinstance(item, dict):
             return None
-        key, name = item.get("id"), clean_name(item.get("name", ""))
-        if not isinstance(key, str) or not key.startswith(USER_PREFIX) or any(p.key == key for p in self._user):
+        key, raw_name = item.get("id"), item.get("name", "")
+        if not isinstance(key, str) or not isinstance(raw_name, str):
+            return None
+        name = clean_name(raw_name)
+        if not key.startswith(USER_PREFIX) or any(p.key == key for p in self._user):
             return None
         # Yerleşik adlar dile göre değişir: yüklerken yalnızca kullanıcı ayarları arasındaki yinelemeye bakılır.
         if not name or len(name) > MAX_NAME or any(p.name.casefold() == name.casefold() for p in self._user):
