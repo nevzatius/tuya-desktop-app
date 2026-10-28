@@ -139,6 +139,8 @@ class PresetStore:
         elif hidden is not None:
             skipped += 1
         items = data.get("presets")
+        if isinstance(items, list) and len(items) > MAX_USER_PRESETS:
+            items, skipped = items[:MAX_USER_PRESETS], skipped + 1  # fazlası atlanır; yedek alınır
         for item in items if isinstance(items, list) else []:
             try:
                 preset = store._parse_item(item)

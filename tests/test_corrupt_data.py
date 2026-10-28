@@ -308,3 +308,82 @@ def test_engine_state_survives_corrupt_and_deep_files(tmp_path):
         write(path, content)
         state = au.EngineState.load(path)
         assert state.fired == {} and not state.paused
+
+
+# =============================== yükleme sınırları ===============================
+
+
+def padded(payload: dict, size: int) -> str:
+    """Geçerli JSON; sonuna boşluk eklenerek tam `size` bayta tamamlanır."""
+    text = json.dumps(payload)
+    assert len(text) <= size
+    return text + " " * (size - len(text))
+
+
+def test_a_file_over_the_size_limit_is_not_read_and_is_moved_aside(tmp_path):
+    path = tmp_path / "x.json"
+    path.write_text(padded({"a": 1}, storage.MAX_FILE_BYTES + 1), encoding="ascii")
+    data, backup, corrupt = storage.load_json(path)
+    assert data is None and corrupt and backup is not None and ".bad-" in backup.name
+    assert backup.stat().st_size == storage.MAX_FILE_BYTES + 1 and not path.exists()  # taşındı: dev dosya kopyalanmadı
+
+
+def test_a_file_exactly_at_the_limit_still_loads(tmp_path):
+    path = tmp_path / "x.json"
+    path.write_text(padded({"a": 1}, storage.MAX_FILE_BYTES), encoding="ascii")
+    assert storage.load_json(path) == ({"a": 1}, None, False)
+
+
+def test_oversized_files_do_not_crash_any_store(tmp_path):
+    big = padded({"devices": [GOOD_DEVICE], "presets": [], "rules": [GOOD_RULE], "fired": {}}, storage.MAX_FILE_BYTES + 10)
+    for name, load in (
+        ("devices.json", dv.DeviceStore.load),
+        ("presets.json", PresetStore.load),
+        ("automations.json", au.RuleStore.load),
+        ("automation_state.json", au.EngineState.load),
+    ):
+        path = tmp_path / name
+        path.write_text(big, encoding="ascii")
+        store = load(path)
+        assert getattr(store, "problem", False) or name == "automation_state.json"
+        assert list(tmp_path.glob(f"{name}.bad-*")) and not path.exists()
+    assert len(dv.DeviceStore.load(tmp_path / "devices.json")) == 0
+
+
+def test_a_failed_move_of_an_oversized_file_still_does_not_crash(tmp_path, monkeypatch):
+    path = tmp_path / "devices.json"
+    path.write_text(padded({}, storage.MAX_FILE_BYTES + 1), encoding="ascii")
+
+    def refuse(*_a, **_k):
+        raise OSError("kilitli")
+
+    monkeypatch.setattr(storage.os, "replace", refuse)
+    store = dv.DeviceStore.load(path)
+    assert store.problem and store.recovered_from is None and len(store) == 0
+
+
+def test_preset_list_is_cut_at_the_limit_and_flagged(tmp_path):
+    from ui.presets import MAX_USER_PRESETS
+
+    items = [{"id": f"u-{i:08x}", "name": f"Ayar {i}", "mode": "white", "bright": 50} for i in range(MAX_USER_PRESETS + 5)]
+    path = tmp_path / "presets.json"
+    content = write(path, {"presets": items})
+    store = PresetStore.load(path)
+    assert [p.name for p in store.user_presets()] == [f"Ayar {i}" for i in range(MAX_USER_PRESETS)]
+    assert_backed_up(store, content, path)
+    exact = tmp_path / "exact.json"
+    write(exact, {"presets": items[:MAX_USER_PRESETS]})
+    assert len(PresetStore.load(exact).user_presets()) == MAX_USER_PRESETS and not PresetStore.load(exact).problem
+
+
+def test_rule_list_is_cut_at_the_limit_and_flagged(tmp_path):
+    rules = [{**GOOD_RULE, "id": f"r{i}", "name": f"Kural {i}"} for i in range(au.MAX_RULES + 5)]
+    path = tmp_path / "automations.json"
+    content = write(path, {"rules": rules})
+    store = au.RuleStore.load(path)
+    assert [r.id for r in store.rules] == [f"r{i}" for i in range(au.MAX_RULES)]
+    assert_backed_up(store, content, path)
+    exact = tmp_path / "exact.json"
+    write(exact, {"rules": rules[: au.MAX_RULES]})
+    loaded = au.RuleStore.load(exact)
+    assert len(loaded.rules) == au.MAX_RULES and not loaded.problem

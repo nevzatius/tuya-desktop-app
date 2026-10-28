@@ -387,6 +387,8 @@ class RuleStore:
                 store.problem = True
         items = data.get("rules")
         skipped = 0 if isinstance(items, list) or items is None else 1
+        if isinstance(items, list) and len(items) > MAX_RULES:
+            items, skipped = items[:MAX_RULES], skipped + 1  # fazlası atlanır; yedek alınır
         seen: set[str] = set()
         for item in items if isinstance(items, list) else []:
             try:
