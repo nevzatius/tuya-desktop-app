@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import getpass
 import os
+import sys
 import tempfile
 from pathlib import Path
 
@@ -63,7 +64,8 @@ def test_listening_on_the_real_channel_is_refused_by_the_guard(qapp):
 
 def test_data_folders_point_at_a_temporary_directory(_isolated_world):
     world = _isolated_world
-    assert dv.user_data_dir() == world / "appdata" / dv.APP_FOLDER
+    base = {"win32": world / "appdata", "darwin": world / "home" / "Library" / "Application Support"}.get(sys.platform, world / "xdg")
+    assert dv.user_data_dir() == base / dv.APP_FOLDER
     assert Path.home() == world / "home"
     assert Path(tempfile.gettempdir()) == world / "temp"
     for name in ("APPDATA", "LOCALAPPDATA", "XDG_CONFIG_HOME", "HOME", "USERPROFILE", "TEMP", "TMP"):

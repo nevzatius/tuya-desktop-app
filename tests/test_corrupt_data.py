@@ -52,7 +52,7 @@ def assert_backed_up(store, original: str, path: Path) -> None:
 # =============================== storage.load_json ===============================
 
 
-@pytest.mark.parametrize("content", ["{bozuk", "", "null", deep(), '{"a":' * 5000 + "1" + "}" * 5000], ids=_id)
+@pytest.mark.parametrize("content", ["{bozuk", "", "null", deep(), '{"a":' * NEST + "1" + "}" * NEST], ids=_id)
 def test_load_json_treats_unparseable_or_too_deep_files_as_corrupt(tmp_path, content):
     path = tmp_path / "x.json"
     write(path, content)
