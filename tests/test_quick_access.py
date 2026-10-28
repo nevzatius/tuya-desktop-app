@@ -294,13 +294,104 @@ def test_quick_command_does_not_touch_the_single_instance_lock(channel, tmp_path
         lock.unlock()
 
 
-def test_real_process_without_the_app_exits_with_code_2_and_a_readable_message():
-    """Gerçek süreç: uygulama çalışmıyorken `light_app.py --scene Film`."""
+def _run_quick_process(args, channel, **kw):
+    """Gerçek süreç, benzersiz (kimsenin dinlemediği) bir kanalla: çalışan gerçek uygulamaya komut gitmesin."""
+    code = f"import sys; import light_app; sys.exit(light_app.run_quick(['app', *{args!r}], {channel!r}))"
     env = {**os.environ, "QT_QPA_PLATFORM": "offscreen", "PYTHONIOENCODING": "utf-8"}
-    done = subprocess.run([sys.executable, str(ROOT / "light_app.py"), "--scene", "Film"], capture_output=True, text=True, timeout=60, env=env, encoding="utf-8")
+    return subprocess.run([sys.executable, "-c", code], cwd=ROOT, timeout=60, env=env, encoding="utf-8", **kw)
+
+
+def test_real_process_without_the_app_exits_with_code_2_and_a_readable_message():
+    """Gerçek süreç: uygulama çalışmıyorken `--scene Film`."""
+    done = _run_quick_process(["--scene", "Film"], f"no-app-{uuid.uuid4().hex}", capture_output=True, text=True)
     assert done.returncode == 2
     assert done.stdout == ""  # hata çıktısı hata akışına gider (betiklerde ayrıştırılabilsin)
     assert "çalışmıyor" in done.stderr or "not running" in done.stderr  # dil, kullanıcının kayıtlı tercihine göre
+
+
+# --- konsolsuz (windowed) exe: akışlar None gelir; mesaj yine de görünmeli ---
+
+win_only = pytest.mark.skipif(sys.platform != "win32", reason="Windows konsol API'si")
+
+
+class FakeKernel32:
+    """GetStdHandle/GetFileType/AttachConsole: hangi standart tutamaçlar devralınmış ve konsol var mı."""
+
+    def __init__(self, handles=None, console=True):
+        self.handles, self.console, self.attach_calls = handles or {}, console, 0
+
+    def GetStdHandle(self, std_id):  # noqa: N802
+        return self.handles.get(std_id)
+
+    def GetFileType(self, handle):  # noqa: N802
+        return 3  # FILE_TYPE_PIPE
+
+    def AttachConsole(self, pid):  # noqa: N802
+        self.attach_calls += 1
+        assert pid == 0xFFFFFFFF  # ATTACH_PARENT_PROCESS
+        return 1 if self.console else 0
+
+
+def no_streams(monkeypatch):
+    """Windowed exe gibi: akışlar None. (Fikstür olmaz: pytest yakalaması çağrı aşamasında akışları yeniden kurar.)"""
+    monkeypatch.setattr(sys, "stdout", None)
+    monkeypatch.setattr(sys, "stderr", None)
+    monkeypatch.setattr(light_app, "_open_console", lambda: "CONSOLE")
+
+
+@win_only
+def test_attach_console_leaves_normal_streams_alone(monkeypatch):
+    kernel = FakeKernel32()
+    light_app.attach_console(kernel)  # pytest altında akışlar var ve exe donmuş değil
+    assert kernel.attach_calls == 0
+
+
+@win_only
+def test_attach_console_attaches_to_the_parent_console_when_nothing_is_redirected(monkeypatch):
+    no_streams(monkeypatch)
+    kernel = FakeKernel32(console=True)
+    light_app.attach_console(kernel)
+    assert sys.stdout == "CONSOLE" and sys.stderr == "CONSOLE" and kernel.attach_calls == 1
+
+
+@win_only
+def test_attach_console_without_a_console_stays_silent(monkeypatch):
+    no_streams(monkeypatch)
+    kernel = FakeKernel32(console=False)
+    light_app.attach_console(kernel)
+    assert sys.stdout is None and sys.stderr is None
+    assert light_app.run_quick(["app", "--power", "x"], "unused") == qc.EXIT_USAGE  # çökmez; mesaj sessizce düşer
+
+
+@win_only
+def test_attach_console_survives_a_broken_console_api(monkeypatch):
+    no_streams(monkeypatch)
+    class Broken(FakeKernel32):
+        def AttachConsole(self, pid):  # noqa: N802
+            raise OSError("no console")
+
+    light_app.attach_console(Broken())
+    assert sys.stdout is None
+
+
+@win_only
+@pytest.mark.parametrize("merge", [False, True])
+def test_real_process_with_no_console_streams_writes_to_redirected_handles(merge):
+    """Gerçek süreç, sys.stdout/stderr None (windowed exe gibi): yönlendirilen tutamaca yazar; `2>&1` de çalışır."""
+    code = (
+        "import sys; sys.stdout = sys.stderr = None; import light_app; "
+        "sys.exit(light_app.run_quick(['app', '--power', 'x'], 'unused'))"
+    )
+    env = {**os.environ, "QT_QPA_PLATFORM": "offscreen"}
+    done = subprocess.run(
+        [sys.executable, "-c", code], cwd=ROOT, timeout=60, env=env,
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT if merge else subprocess.PIPE,
+    )
+    assert done.returncode == qc.EXIT_USAGE
+    text = (done.stdout + (b"" if merge else done.stderr)).decode("utf-8")
+    assert "on ya da off" in text or "on or off" in text
+    if not merge:
+        assert done.stdout == b""  # kullanım hatası hata akışında
 
 
 # =============================== tepsi menüsü ===============================

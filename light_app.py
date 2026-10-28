@@ -15,16 +15,55 @@ def start_hidden(argv: list[str], has_tray: bool) -> bool:
     return "--minimized" in argv and has_tray
 
 
-def attach_console() -> None:
-    """Konsolsuz (pencere) exe komut satırından çalıştırılınca çıktı üst konsola yazılsın."""
-    if sys.platform != "win32" or not (getattr(sys, "frozen", False) or sys.stdout is None):
+_STD_STREAMS = (("stdout", -11), ("stderr", -12))  # STD_OUTPUT_HANDLE, STD_ERROR_HANDLE
+_BAD_HANDLES = (None, 0, -1, 0xFFFFFFFF, 0xFFFFFFFFFFFFFFFF)  # NULL ve INVALID_HANDLE_VALUE
+
+
+def _kernel32():
+    import ctypes
+    from ctypes import c_uint32, c_void_p
+
+    k = ctypes.WinDLL("kernel32", use_last_error=True)
+    k.GetStdHandle.argtypes, k.GetStdHandle.restype = [c_uint32], c_void_p
+    k.GetFileType.argtypes, k.GetFileType.restype = [c_void_p], c_uint32
+    k.AttachConsole.argtypes, k.AttachConsole.restype = [c_uint32], c_uint32
+    return k
+
+
+def _open_console():
+    return open("CONOUT$", "w", encoding="utf-8", buffering=1)  # noqa: SIM115
+
+
+def attach_console(kernel32=None) -> None:
+    """Konsolsuz (pencere) exe komut satırından çalıştırılınca mesajlar görünsün.
+
+    Önce üst sürecin yönlendirdiği (boru, dosya: `> cikti.txt`, `2>&1`) standart tutamaçlar kullanılır; yönlendirme yoksa
+    üst sürecin konsoluna bağlanılır (ATTACH_PARENT_PROCESS). Konsol da yoksa akışlar olduğu gibi kalır (sessiz geçilir).
+    """
+    if sys.platform != "win32" or not (getattr(sys, "frozen", False) or sys.stdout is None or sys.stderr is None):
         return
     try:
-        import ctypes
+        import msvcrt
 
-        if ctypes.windll.kernel32.AttachConsole(-1):  # ATTACH_PARENT_PROCESS
-            sys.stdout = open("CONOUT$", "w", encoding="utf-8")  # noqa: SIM115
-            sys.stderr = open("CONOUT$", "w", encoding="utf-8")  # noqa: SIM115
+        k = kernel32 or _kernel32()
+        owned: dict[object, object] = {}  # tutamaç -> akış (`2>&1`: iki akış aynı tutamacı paylaşır, bir kez açılır)
+        console: object | None = None
+        attached: bool | None = None
+        streams: dict[str, object] = {}
+        for name, std_id in _STD_STREAMS:
+            handle = k.GetStdHandle(std_id)
+            if handle not in _BAD_HANDLES and k.GetFileType(handle) != 0:  # 0 = FILE_TYPE_UNKNOWN
+                if handle not in owned:
+                    owned[handle] = open(msvcrt.open_osfhandle(handle, os.O_WRONLY), "w", encoding="utf-8", buffering=1)  # noqa: SIM115
+                streams[name] = owned[handle]
+                continue
+            if attached is None:
+                attached = bool(k.AttachConsole(0xFFFFFFFF))  # ATTACH_PARENT_PROCESS
+            if attached:
+                console = console or _open_console()
+                streams[name] = console
+        for name, stream in streams.items():
+            setattr(sys, name, stream)
     except Exception:  # noqa: BLE001 - konsol yoksa sessizce devam
         pass
 
