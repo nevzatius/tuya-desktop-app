@@ -92,6 +92,20 @@ def test_release_notes_explain_install_in_both_languages_and_flag_unverified_fea
     assert "not yet been verified" in flat and "doğrulanmadı" in flat
 
 
+def test_release_notes_cover_assets_verification_and_known_limits_in_both_languages():
+    body = read(".github/release_body.md")
+    english, turkish = body.split("## Tuya Desktop App 0.4.0 (Türkçe)")
+    assert f"Tuya Desktop App {version.__version__}" in english  # not sürümle birlikte güncellenir
+    for part, limits in ((english, "Known limits"), (turkish, "Bilinen sınırlar")):
+        assert limits in part and "Get-FileHash" in part and "SHA256SUMS.txt" in part and "portable" in part
+        assert f"Setup-{version.__version__}.exe" in part and f"portable-{version.__version__}.zip" in part
+    flat_en, flat_tr = (re.sub(r"[>*\s]+", " ", part) for part in (english, turkish))
+    for needle in ("Bluetooth only", "One connection", "Unsigned installer", "sunrise/sunset", "several lights", "global shortcuts", "English interface"):
+        assert needle in flat_en, needle
+    for needle in ("Yalnızca Bluetooth", "Tek bağlantı", "İmzasız kurulum", "gün doğumu/batımı", "birden çok ışık", "genel kısayol", "İngilizce arayüz"):
+        assert needle in flat_tr, needle
+
+
 def test_start_hidden_only_when_minimized_and_a_tray_exists():
     assert start_hidden(["app", "--minimized"], True) is True
     assert start_hidden(["app", "--minimized"], False) is False  # tepsi yoksa pencere yine de görünmeli
