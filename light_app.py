@@ -79,6 +79,15 @@ def devices_problem_text(store) -> str:
     return f"{head}\n\n{backup}"
 
 
+def legacy_config_text(store) -> str:
+    """Eski config.json bu açılışta içe aktarıldıysa silmeyi öneren metin (yoksa boş). Dosya kendiliğinden silinmez."""
+    if store.legacy_imported is None:
+        return ""
+    from i18n import tr
+
+    return tr("app.legacy_config_imported", path=store.legacy_imported)
+
+
 def run_quick(argv: list[str], channel: str | None = None) -> int | None:
     """`--scene "Film"` / `--power on|off`: komutu ÇALIŞAN uygulamaya iletir ve çıkış kodunu döndürür.
 
@@ -218,6 +227,9 @@ def main() -> int:
     command_server.start()  # tek-örnek kilidini aldıktan sonra: komut satırı bu kanaldan çalışan uygulamaya ulaşır
     if not start_hidden(sys.argv, window.has_tray):
         window.show()
+    legacy_text = legacy_config_text(store)
+    if legacy_text:
+        window.notice(legacy_text)
     if presets.problem:
         window.notice(tr("presets.recovered"))
     if rules.problem:

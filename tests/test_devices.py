@@ -191,3 +191,58 @@ def test_empty_account_and_error_dict_messages():
         ci.fetch(GOOD_ID, GOOD_SECRET, "eu", factory_for([]))
     with pytest.raises(ci.CloudError, match="Cihaz listesi alınamadı"):
         ci.fetch(GOOD_ID, GOOD_SECRET, "eu", factory_for({"Error": "boom"}))
+
+
+# -- eski config.json: içe aktarım bildirimi, silme önerisi --------------------------------------
+
+
+def test_legacy_import_is_reported_once_and_the_old_file_is_never_deleted(tmp_path):
+    legacy = tmp_path / "config.json"
+    cfg(7).save(legacy)
+    path = tmp_path / "data" / "devices.json"
+    first = dv.DeviceStore.load(path, legacy_config=legacy)
+    assert first.legacy_imported == legacy and legacy.exists()
+    again = dv.DeviceStore.load(path, legacy_config=legacy)  # devices.json artık var: yeniden içe aktarılmaz
+    assert again.legacy_imported is None and legacy.exists()
+    assert dv.DeviceStore.load(tmp_path / "bos.json").legacy_imported is None
+
+
+def test_startup_suggests_deleting_the_old_config_after_the_import(tmp_path):
+    import i18n
+    import light_app
+
+    legacy = tmp_path / "config.json"
+    cfg(7).save(legacy)
+    store = dv.DeviceStore.load(tmp_path / "devices.json", legacy_config=legacy)
+    text = light_app.legacy_config_text(store)
+    assert str(legacy) in text and "silmenizi öneririz" in text and "kendiliğinden silmez" in text
+    assert "dev7" not in text and "key7" not in text  # gizli bilgi metne girmez
+    i18n.set_language("en")
+    assert "deleting it" in light_app.legacy_config_text(store) and "will not delete it" in light_app.legacy_config_text(store)
+    assert light_app.legacy_config_text(dv.DeviceStore.load(tmp_path / "devices.json", legacy_config=legacy)) == ""
+
+
+def test_cli_tools_read_the_selected_light_from_the_data_folder_then_the_legacy_file(tmp_path):
+    path, legacy = tmp_path / "devices.json", tmp_path / "config.json"
+    with pytest.raises(lc.ConfigError) as err:
+        dv.load_current_config(path, legacy)
+    assert "devices.json" in str(err.value) and "get_credentials.py" in str(err.value)
+    cfg(3).save(legacy)
+    assert dv.load_current_config(path, legacy).device_id == "dev3"  # yalnızca eski dosya var
+    store = dv.DeviceStore(path)
+    store.add(cfg(1))
+    store.add(cfg(2))
+    store.select("dev2")
+    store.save()
+    assert dv.load_current_config(path, legacy).device_id == "dev2"  # veri klasörü önceliklidir
+
+
+def test_app_cli_helper_uses_the_isolated_data_folder(_isolated_world):
+    import app
+
+    with pytest.raises(lc.ConfigError):
+        app.load_config()
+    store = dv.DeviceStore()
+    store.add(cfg(5))
+    store.save()
+    assert app.load_config().device_id == "dev5"

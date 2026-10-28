@@ -137,7 +137,7 @@ class Config:
         path.write_text(
             json.dumps(asdict(self), indent=2, ensure_ascii=False), encoding="utf-8"
         )
-        try:  # içinde yerel anahtar var: sadece kullanıcı okusun
+        try:  # içinde yerel anahtar var; POSIX'te sahibe kısılır (Windows'ta chmod erişimi daraltmaz)
             os.chmod(path, 0o600)
         except OSError:
             pass

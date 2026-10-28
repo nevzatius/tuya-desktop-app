@@ -25,7 +25,7 @@ def write_json_atomic(path: Path, payload: Any, private: bool = False) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(path.name + ".tmp")
     tmp.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
-    if private:
+    if private:  # POSIX: yalnızca sahip okur/yazar. Windows'ta chmod sadece salt-okunur bayrağını etkiler (erişimi daraltmaz)
         try:
             os.chmod(tmp, 0o600)
         except OSError:

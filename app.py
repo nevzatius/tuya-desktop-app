@@ -308,9 +308,16 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def load_config() -> lc.Config:
+    """Işık bilgisi uygulamayla aynı yerden okunur: veri klasöründeki devices.json (seçili ışık), yoksa eski config.json."""
+    import devices
+
+    return devices.load_current_config()
+
+
 async def run_scan(raw: bool = False) -> None:
     try:
-        cfg = lc.Config.load()
+        cfg = load_config()
         own_uuid, own_address = cfg.uuid, cfg.address
     except lc.ConfigError:
         own_uuid, own_address = "", ""
@@ -335,7 +342,7 @@ async def run_scan(raw: bool = False) -> None:
 
 
 async def run_command(args: argparse.Namespace) -> None:
-    cfg = lc.Config.load()
+    cfg = load_config()
     client = lc.LightClient(cfg, on_status=print, on_log=print if args.verbose else None)
     try:
         match args.cmd:
@@ -383,7 +390,7 @@ def main(argv: list[str] | None = None) -> int:
             except ImportError:
                 print("tkinter bulunamadı. Windows/macOS'ta python.org kurulumunu kullanın; Ubuntu'da: sudo apt install python3-tk")
                 return 1
-            App(lc.Config.load()).run()
+            App(load_config()).run()
         else:
             asyncio.run(run_command(args))
     except Exception as exc:  # noqa: BLE001

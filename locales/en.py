@@ -7,6 +7,7 @@ STRINGS: dict[str, str] = {
     "app.devices_partial": "The lights file (devices.json) had damaged entries that were skipped; continuing with the valid lights.",
     "app.devices_backup_kept": "A backup of the damaged file was kept in the data folder as “{backup}”.",
     "app.devices_backup_failed": "The file could not be backed up.",
+    "app.legacy_config_imported": "The light from the old config.json was imported. That file ({path}) is no longer needed and holds the local key in plain text; we recommend deleting it. The app will not delete it for you.",
     # -- light names ------------------------------------------------------------------
     "device.default_name": "Room light",
     "device.fallback_name": "Light",

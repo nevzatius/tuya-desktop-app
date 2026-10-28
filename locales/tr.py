@@ -7,6 +7,7 @@ STRINGS: dict[str, str] = {
     "app.devices_partial": "Işık listesi dosyasında (devices.json) bozuk kayıtlar vardı ve atlandı; geçerli ışıklarla devam ediliyor.",
     "app.devices_backup_kept": "Bozuk dosyanın yedeği veri klasörüne “{backup}” adıyla alındı.",
     "app.devices_backup_failed": "Dosyanın yedeği alınamadı.",
+    "app.legacy_config_imported": "Eski config.json içindeki ışık içe aktarıldı. Dosya ({path}) artık gerekmiyor ve yerel anahtarı açık metin olarak içeriyor; silmenizi öneririz. Uygulama onu kendiliğinden silmez.",
     # -- ışık adları ---------------------------------------------------------------
     "device.default_name": "Odamdaki ışık",
     "device.fallback_name": "Işık",

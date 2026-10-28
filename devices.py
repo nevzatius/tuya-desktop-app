@@ -1,7 +1,9 @@
 """Birden çok ışığın saklanması (kullanıcıya özel klasörde `devices.json`).
 
-Dosyada yerel anahtarlar bulunur; yalnızca kullanıcı okuyabilsin diye izinler kısılır.
-Eski tek-ışıklı `config.json` varsa ilk açılışta içe aktarılır.
+Dosyada yerel anahtarlar bulunur ve ŞİFRELENMEZ. POSIX'te dosya izni 0600'e kısılır; Windows'ta `os.chmod`
+yalnızca salt-okunur bayrağını etkiler, erişimi daraltmaz: koruma `%APPDATA%` klasörünün (kullanıcı profili)
+varsayılan erişim listesinden gelir.
+Eski tek-ışıklı `config.json` varsa ilk açılışta içe aktarılır (`legacy_imported`); dosya otomatik silinmez.
 """
 
 from __future__ import annotations
@@ -96,6 +98,7 @@ class DeviceStore:
         self.selected: str = ""
         self.recovered_from: Path | None = None  # dosya bozuksa: yedeğin yolu (yedeklenemediyse None)
         self.problem = False  # dosya bozuktu ya da bazı kayıtlar atlandı
+        self.legacy_imported: Path | None = None  # bu yüklemede içe aktarılan eski config.json (kullanıcı silmeyi düşünsün)
 
     # -- okuma / yazma ------------------------------------------------------
 
@@ -112,6 +115,7 @@ class DeviceStore:
             try:  # eski tek-ışıklı kurulumdan geçiş
                 store.add(lc.Config.load(Path(legacy_config)))
                 store.save()
+                store.legacy_imported = Path(legacy_config)
             except lc.ConfigError:
                 pass
         if store.selected not in store._devices:
@@ -191,6 +195,19 @@ class DeviceStore:
     def rename(self, device_id: str, name: str) -> None:
         if device_id in self._devices and name.strip():
             self._devices[device_id].name = name.strip()
+
+
+def load_current_config(path: Path | None = None, legacy_config: Path | None = None) -> lc.Config:
+    """Komut satırı araçları için: uygulamanın okuduğu yerden (veri klasöründeki devices.json) seçili ışık;
+    yoksa eski `config.json`. İkisi de yoksa `lc.ConfigError`."""
+    store = DeviceStore.load(path)
+    cfg = store.current()
+    if cfg is not None:
+        return cfg
+    legacy = Path(legacy_config) if legacy_config is not None else lc.CONFIG_PATH
+    if legacy.exists():
+        return lc.Config.load(legacy)
+    raise lc.ConfigError(tr("error.config_missing", name=store.path.name))
 
 
 def _text(data: dict, key: str, default: str = "") -> str:
