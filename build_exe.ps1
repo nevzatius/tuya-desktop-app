@@ -10,14 +10,17 @@ if (-not (Test-Path $py)) {
     else { Write-Host "Önce kur.ps1 dosyasını çalıştırın." -ForegroundColor Red; exit 1 }
 }
 
-Write-Host "PyInstaller kuruluyor..."
-& $py -m pip install --quiet pyinstaller
+# Sürümler sabit: aynı kaynaktan aynı exe çıksın. release.yml PYINSTALLER_VERSION ile aynı değeri verir (testle eşleşir).
+$pyInstallerVersion = if ($env:PYINSTALLER_VERSION) { $env:PYINSTALLER_VERSION } else { "6.22.3" }
+$pyInstallerHooksVersion = "2026.9"
+Write-Host "PyInstaller $pyInstallerVersion kuruluyor..."
+& $py -m pip install --quiet "pyinstaller==$pyInstallerVersion" "pyinstaller-hooks-contrib==$pyInstallerHooksVersion"
 if ($LASTEXITCODE -ne 0) { Write-Host "PyInstaller kurulamadı." -ForegroundColor Red; exit 1 }
 
 if (-not (Test-Path "assets\app.ico")) { & $py make_icon.py }
 
 function Invoke-Build([string[]]$extra) {
-    & $py -m PyInstaller --noconfirm --clean --windowed `
+    & $py -m PyInstaller --noconfirm --clean --noupx --windowed `
         --name $($info.Slug) --icon assets\app.ico `
         --add-data "assets;assets" `
         --collect-all bleak `
