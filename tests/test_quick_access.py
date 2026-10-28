@@ -337,7 +337,7 @@ def test_tray_without_automation_has_no_pause_option(qapp):
 @pytest.fixture()
 def tray_window(qapp, tmp_path):
     bridge = FakeBridge()
-    host = AutomationHost(au.RuleStore(), au.EngineState(), FakeBackend(), submit=lambda c: c.close())
+    host = AutomationHost(au.RuleStore(tmp_path / "automations.json"), au.EngineState(tmp_path / "state.json"), FakeBackend(), submit=lambda c: c.close())
     store = PresetStore(tmp_path / "presets.json")
     win = MainWindow(CFG, bridge, settings=QSettings(str(tmp_path / "a.ini"), QSettings.Format.IniFormat), use_tray=False, preset_store=store, automation_host=host)
     win._setup_tray()
@@ -362,12 +362,49 @@ def test_tray_presets_follow_changes_in_the_main_window(tray_window):
     assert "Okyanus" not in [a.text() for a in win._tray.presets_menu.actions()]
 
 
-def test_tray_pause_and_the_automation_tab_stay_in_sync(tray_window):
+def pause_views(win):
+    """Duraklatma durumunun üç görünümü: (sekmedeki uyarı bandı görünür mü, düğme yazısı, tepsi menüsü yazısı)."""
+    page = win.automation_page
+    return page.paused_banner.isVisible(), page.pause_button.text(), win._tray.pause_action.text()
+
+
+RUNNING = (False, "Otomasyonları duraklat", "Otomasyonları duraklat")
+PAUSED = (True, "Devam ettir", "Otomasyonlara devam et")
+
+
+def test_pause_stays_in_sync_between_tab_tray_and_host(tray_window):
     win, bridge, host, store = tray_window
-    win._tray.pause_action.trigger()
-    assert host.scheduler.paused and win._tray.pause_action.text() == "Otomasyonlara devam et"
+    win.show()
+    win.tab_automation.click()
+    assert pause_views(win) == RUNNING
+    win._tray.pause_action.trigger()  # tepsiden duraklat
+    assert host.scheduler.paused and pause_views(win) == PAUSED
     win.automation_page.pause_button.click()  # sekmeden devam ettir
-    assert not host.scheduler.paused and win._tray.pause_action.text() == "Otomasyonları duraklat"
+    assert not host.scheduler.paused and pause_views(win) == RUNNING
+    win.automation_page.pause_button.click()  # sekmeden duraklat
+    assert host.scheduler.paused and pause_views(win) == PAUSED
+    win._tray.pause_action.trigger()  # tepsiden devam ettir
+    assert not host.scheduler.paused and pause_views(win) == RUNNING
+    host.set_paused(True)  # doğrudan (ör. başka bir kod yolu)
+    assert pause_views(win) == PAUSED
+
+
+def test_app_opened_while_paused_shows_the_paused_state_everywhere(qapp, tmp_path):
+    state = au.EngineState(tmp_path / "state.json")
+    state.set_paused(True)  # önceki oturumda duraklatılmış ve kaydedilmiş
+    host = AutomationHost(au.RuleStore(tmp_path / "automations.json"), au.EngineState.load(tmp_path / "state.json"), FakeBackend(), submit=lambda c: c.close())
+    assert host.scheduler.paused
+    win = MainWindow(CFG, FakeBridge(), settings=QSettings(str(tmp_path / "a.ini"), QSettings.Format.IniFormat), use_tray=False, preset_store=PresetStore(tmp_path / "presets.json"), automation_host=host)
+    win._setup_tray()
+    try:
+        win.show()
+        win.tab_automation.click()
+        assert pause_views(win) == PAUSED
+        win._tray.pause_action.trigger()  # tepsiden devam ettir: kalıcı durum da güncellenir
+        assert pause_views(win) == RUNNING
+        assert not au.EngineState.load(tmp_path / "state.json").paused
+    finally:
+        win.close()
 
 
 def test_apply_preset_key_ignores_unknown_ids(tray_window):
