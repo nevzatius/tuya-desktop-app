@@ -61,20 +61,23 @@ An honest summary of what has and has not been tried on real hardware:
 | Area | Status |
 |---|---|
 | Bluetooth connection and handshake | **Verified** on a real light (Tuya category `dj`, YX-ZNLD9) with v0.2.0 |
-| Commands (on/off, brightness, colour, presets), UI, energy estimates | Covered by automated tests; full end-to-end check on a real light is still ongoing |
+| On/off, brightness and colour, built-in presets | **Verified** on a real light (v0.4.0 build) |
+| Energy estimates | Automated tests only (they are estimates by design) |
 | Setup wizard v2 (clipboard detection, nearby scan) | Automated tests only — **not yet verified on a real device** |
 | **Blink** button (identify a light) | Experimental — **not yet verified on a real device** |
 | **Troubleshooter** card and diagnostic report | Experimental — **not yet verified on a real device** (the report's privacy filter is covered by tests) |
-| Your own presets (save, edit, delete, hide) | Automated tests only — **not yet verified on a real device** |
-| **Automations**: time and app-start triggers, on/off/brightness/white/colour/preset actions, smooth fade | Automated tests only — **not yet verified on a real device** |
-| Automations: **sunrise / sunset** triggers | Checked against known places in tests only — **not yet verified on a real device** |
-| Automations: **several lights** as a target | Automated tests only — **not yet verified on a real device** |
+| Your own presets (save, edit, delete, hide) | **Verified** on a real light (v0.4.0 build) |
+| **Automations**: a rule at a set time, **smooth fade**, **pause / resume** from the tray | **Verified** on a real light (v0.4.0 build) |
+| Automations: app-start trigger and the white / colour / preset actions | Automated tests only — **not yet verified on a real device** |
+| Automations: **sunrise / sunset** triggers | Checked against known places in tests only — **not tried on a real device** |
+| Automations: **several lights** as a target | Automated tests only — **not tried on a real device** |
 | Automations: **missed rule** (runs once within the tolerance after waking or starting) | Automated tests only — **not yet verified on a real device** |
 | Automations: **unreachable light** (3 tries, then a tray notification) | Automated tests only — **not yet verified on a real device** |
-| Tray presets and command line (`--scene`, `--power`) | Automated tests, including a two-process command-line check — **not yet verified on a real device** |
-| **Global shortcuts** | Automated tests, including a real Windows `RegisterHotKey` call — **not yet verified on a real device** |
-| Windows installer | Built with Inno Setup and installed over an earlier install on the maintainer's Windows 10 PC (v0.4.0); the app starts and keeps its data. The release workflow and the **portable zip** are **not yet tried** |
-| **English interface** | Automated tests and generated screenshots — **not yet verified** on an English-language Windows |
+| Tray menu (presets, pause) and command line (`--scene`, `--power`) | **Verified** on a real light; also automated tests, including a two-process command-line check |
+| **Global shortcuts** | Automated tests, including a real Windows `RegisterHotKey` call — **not tried on a real device** |
+| Log (**Log** button, `app.log`) | **Verified** on a real device |
+| Windows installer | Built with Inno Setup and installed over an earlier install on the maintainer's Windows 10 PC (v0.4.0): **verified**, the app starts and keeps its data. The release workflow built and published v0.4.0; the **portable zip** is **not yet verified** |
+| **English interface** | Automated tests and generated screenshots — **not tried** on an English-language Windows |
 | Windows 10/11 | Primary target; the UI has had little wide testing on real Windows installs |
 | macOS / Linux | Expected to work (Qt + bleak), **not tried** |
 | Wi-Fi (local network) control | **Not available yet** (planned) |
@@ -105,7 +108,7 @@ Lights do not measure power. The app estimates: *rated power (W) × brightness �
   <img src="docs/screenshots/en/automation.png" width="260" alt="Automation tab with three sample rules">
 </p>
 
-> **Not yet verified on a real device.** The engine and the tab are covered by automated tests (time maths, sunrise/sunset against known places, daylight-saving changes, duplicate prevention, retries, fades); the maintainer has not yet watched a rule switch a real light at its time. Treat the first days as a trial.
+> **Partly verified on a real device.** The maintainer has watched a rule at a set time, smooth fades and pause / resume work on a real light. **Not tried yet:** sunrise/sunset triggers, several lights, the app-start trigger and the white / colour / preset actions. The whole engine is covered by automated tests (time maths, sunrise/sunset against known places, daylight-saving changes, duplicate prevention, retries, fades). Treat the first days as a trial.
 
 Open the **Automation** tab and add rules. A rule is *when* → *what* → *which lights*:
 
@@ -125,7 +128,7 @@ Open the **Automation** tab and add rules. A rule is *when* → *what* → *whic
 
 ## Quick access: tray, command line and shortcuts
 
-> **Not yet verified on a real device.** These features are covered by automated tests (including a real Windows `RegisterHotKey` call and a two-process command-line check), but have not been tried with a real light by the maintainer.
+> **Partly verified on a real device.** The maintainer has used the tray menu and the command line (`--scene`, `--power`) with a real light. **Global shortcuts have not been tried** with a real light (covered by automated tests, including a real Windows `RegisterHotKey` call).
 
 - **Tray menu:** right-click the tray icon for a **Presets** submenu (built-in and your own) and **Pause automations / Resume automations**.
 - **Command line** (the app must already be running, it can sit in the tray):

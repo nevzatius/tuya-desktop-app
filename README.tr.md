@@ -61,20 +61,23 @@ Gerçek cihazla nelerin denendiğinin, nelerin denenmediğinin dürüst özeti:
 | Alan | Durum |
 |---|---|
 | Bluetooth bağlantısı ve el sıkışma | Gerçek bir ışıkla (Tuya `dj` kategorisi, YX-ZNLD9) v0.2.0 ile **doğrulandı** |
-| Komutlar (aç/kapat, parlaklık, renk, hazır ayarlar), arayüz, enerji tahmini | Otomatik testlerle sınandı; gerçek ışıkta uçtan uca doğrulama sürüyor |
+| Aç/kapat, parlaklık ve renk, yerleşik hazır ayarlar | Gerçek bir ışıkta **doğrulandı** (v0.4.0 derlemesi) |
+| Enerji tahmini | Yalnızca otomatik testler (zaten tahmindir) |
 | Kurulum sihirbazı v2 (pano algılama, yakın tarama) | Yalnızca otomatik testler — **gerçek cihazda henüz doğrulanmadı** |
 | **Yanıp söndür** düğmesi (ışığı tanıma) | Deneysel — **gerçek cihazda henüz doğrulanmadı** |
 | **Sorun giderici** kart ve tanılama raporu | Deneysel — **gerçek cihazda henüz doğrulanmadı** (raporun gizlilik filtresi testlerle sınandı) |
-| Kendi hazır ayarlarınız (kaydet, düzenle, sil, gizle) | Yalnızca otomatik testler — **gerçek cihazda henüz doğrulanmadı** |
-| **Otomasyonlar**: saat ve uygulama açılışı tetikleyicileri, aç/kapat/parlaklık/beyaz/renk/hazır ayar eylemleri, yumuşak geçiş | Yalnızca otomatik testler — **gerçek cihazda henüz doğrulanmadı** |
-| Otomasyonlar: **gün doğumu / batımı** tetikleyicileri | Yalnızca bilinen yerlere karşı testler — **gerçek cihazda henüz doğrulanmadı** |
-| Otomasyonlar: hedef olarak **birden çok ışık** | Yalnızca otomatik testler — **gerçek cihazda henüz doğrulanmadı** |
+| Kendi hazır ayarlarınız (kaydet, düzenle, sil, gizle) | Gerçek bir ışıkta **doğrulandı** (v0.4.0 derlemesi) |
+| **Otomasyonlar**: belirli saatte kural, **yumuşak geçiş**, tepsiden **duraklat / sürdür** | Gerçek bir ışıkta **doğrulandı** (v0.4.0 derlemesi) |
+| Otomasyonlar: uygulama açılışı tetikleyicisi ve beyaz / renk / hazır ayar eylemleri | Yalnızca otomatik testler — **gerçek cihazda henüz doğrulanmadı** |
+| Otomasyonlar: **gün doğumu / batımı** tetikleyicileri | Yalnızca bilinen yerlere karşı testler — **gerçek cihazda denenmedi** |
+| Otomasyonlar: hedef olarak **birden çok ışık** | Yalnızca otomatik testler — **gerçek cihazda denenmedi** |
 | Otomasyonlar: **kaçırılan kural** (uyanma ya da açılıştan sonra tolerans içinde bir kez çalışır) | Yalnızca otomatik testler — **gerçek cihazda henüz doğrulanmadı** |
 | Otomasyonlar: **ulaşılamayan ışık** (3 deneme, sonra tepsi bildirimi) | Yalnızca otomatik testler — **gerçek cihazda henüz doğrulanmadı** |
-| Tepsi hazır ayarları ve komut satırı (`--scene`, `--power`) | Otomatik testler (iki süreçli komut satırı denemesi dahil) — **gerçek cihazda henüz doğrulanmadı** |
-| **Genel kısayol tuşları** | Otomatik testler (gerçek bir Windows `RegisterHotKey` çağrısı dahil) — **gerçek cihazda henüz doğrulanmadı** |
-| Windows yükleyicisi | Inno Setup ile derlendi ve geliştiricinin Windows 10 bilgisayarında önceki kurulumun üzerine kuruldu (v0.4.0); uygulama açılıyor ve verilerini koruyor. Release iş akışı ve **taşınabilir zip** **henüz denenmedi** |
-| **İngilizce arayüz** | Otomatik testler ve üretilen ekran görüntüleri — İngilizce Windows'ta **henüz doğrulanmadı** |
+| Tepsi menüsü (hazır ayarlar, duraklat) ve komut satırı (`--scene`, `--power`) | Gerçek bir ışıkta **doğrulandı**; ayrıca otomatik testler (iki süreçli komut satırı denemesi dahil) |
+| **Genel kısayol tuşları** | Otomatik testler (gerçek bir Windows `RegisterHotKey` çağrısı dahil) — **gerçek cihazda denenmedi** |
+| Günlük (**Günlük** düğmesi, `app.log`) | Gerçek cihazda **doğrulandı** |
+| Windows yükleyicisi | Inno Setup ile derlendi ve geliştiricinin Windows 10 bilgisayarında önceki kurulumun üzerine kuruldu (v0.4.0): **doğrulandı**, uygulama açılıyor ve verilerini koruyor. Release iş akışı v0.4.0'ı derleyip yayınladı; **taşınabilir zip** **henüz doğrulanmadı** |
+| **İngilizce arayüz** | Otomatik testler ve üretilen ekran görüntüleri — İngilizce Windows'ta **denenmedi** |
 | Windows 10/11 | Birincil hedef; arayüz gerçek Windows kurulumlarında henüz geniş denenmedi |
 | macOS / Linux | Çalışması beklenir (Qt + bleak), **denenmedi** |
 | Wi-Fi (yerel ağ) kontrolü | **Henüz yok** (planlı) |
@@ -105,7 +108,7 @@ Işıklar güç ölçmez. Uygulama şunu tahmin eder: *anma gücü (W) × parlak
   <img src="docs/screenshots/tr/automation.png" width="260" alt="Üç örnek kuralın göründüğü Otomasyon sekmesi">
 </p>
 
-> **Gerçek cihazda henüz doğrulanmadı.** Motor ve sekme otomatik testlerle sınandı (saat hesapları, bilinen konumlarda gün doğumu/batımı, yaz saati geçişleri, tekrar önleme, yeniden deneme, yumuşak geçiş); geliştirici henüz bir kuralın gerçek ışığı zamanında açıp kapattığını izlemedi. İlk günleri deneme olarak görün.
+> **Gerçek cihazda kısmen doğrulandı.** Geliştirici belirli saatteki bir kuralın, yumuşak geçişin ve duraklat / sürdür işleminin gerçek ışıkta çalıştığını izledi. **Henüz denenmedi:** gün doğumu/batımı tetikleyicileri, birden çok ışık, uygulama açılışı tetikleyicisi ve beyaz / renk / hazır ayar eylemleri. Motorun tamamı otomatik testlerle sınandı (saat hesapları, bilinen konumlarda gün doğumu/batımı, yaz saati geçişleri, tekrar önleme, yeniden deneme, yumuşak geçiş). İlk günleri deneme olarak görün.
 
 **Otomasyon** sekmesini açıp kural ekleyin. Kural: *ne zaman* → *ne yapılsın* → *hangi ışıklar*:
 
@@ -125,7 +128,7 @@ Işıklar güç ölçmez. Uygulama şunu tahmin eder: *anma gücü (W) × parlak
 
 ## Hızlı erişim: tepsi, komut satırı ve kısayollar
 
-> **Gerçek cihazda henüz doğrulanmadı.** Bu özellikler otomatik testlerle denenmiştir (gerçek bir Windows `RegisterHotKey` çağrısı ve iki süreçli komut satırı denemesi dahil), ancak geliştirici bunları gerçek ışıkla denememiştir.
+> **Gerçek cihazda kısmen doğrulandı.** Geliştirici tepsi menüsünü ve komut satırını (`--scene`, `--power`) gerçek ışıkla kullandı. **Genel kısayol tuşları gerçek ışıkla denenmedi** (gerçek bir Windows `RegisterHotKey` çağrısı dahil otomatik testlerle sınandı).
 
 - **Tepsi menüsü:** tepsi simgesine sağ tıklayın: **Hazır ayarlar** alt menüsü (yerleşik ve kendi ayarlarınız) ve **Otomasyonları duraklat / Otomasyonlara devam et**.
 - **Komut satırı** (uygulama zaten çalışıyor olmalı, tepside durabilir):

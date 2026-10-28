@@ -41,5 +41,5 @@ Tuya/Smart Life ışıklarını Bluetooth LE ile kontrol eden Windows odaklı ma
 - Enerji değerleri tahmindir (watt × parlaklık × süre); yalnızca uygulama açık ve bağlıyken kaydedilir.
 - Wi-Fi/LAN kontrolü ve Smart Life QR girişi yok (Tuya istemci kimliği gerekir).
 - Gerçek cihazda doğrulanmayan özellikler README Durum tablosunda "doğrulanmadı" diye işaretli kalır.
-- Dal v0.4.0 üzerinde çalışılıyor: kendi hazır ayarlar, otomasyon motoru ve sekmesi, hızlı erişim (tepsi, --scene/--power, kısayollar). Hepsi gerçek cihazda henüz doğrulanmadı (README Durum tablosunda işaretli).
+- v0.4.0 yayınlandı (main): kendi hazır ayarlar, otomasyon motoru ve sekmesi, hızlı erişim (tepsi, --scene/--power, kısayollar). Gerçek cihazda henüz denenmeyenler: gün doğumu/batımı, birden çok ışık, genel kısayollar, İngilizce arayüz, sihirbaz v2, Yanıp söndür, sorun giderici, taşınabilir zip (esas liste README Durum tablosu).
 - Otomasyonlar yalnızca uygulama çalışırken, bilgisayar uyanıkken ve ışık menzildeyken çalışır; Smart Life bulut zamanlayıcılarından ayrıdır.
