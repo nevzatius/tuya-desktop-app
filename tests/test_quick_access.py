@@ -234,7 +234,8 @@ def test_handler_crash_is_contained(qapp):
 def test_channel_is_limited_to_the_local_user_and_named_after_them(channel):
     recorder, send, name, server, store = channel
     assert server.user_only()
-    assert ipc.server_name("ali veli").startswith("TuyaDesktopApp-ali_veli") and ipc.server_name("a/b\\c") == "TuyaDesktopApp-a_b_c"
+    prefix = ipc.SERVER_PREFIX  # testte benzersiz önek (conftest); gerçek önek "TuyaDesktopApp"
+    assert ipc.server_name("ali veli") == f"{prefix}-ali_veli" and ipc.server_name("a/b\\c") == f"{prefix}-a_b_c"
 
 
 def test_not_running_gives_a_clear_message_and_exit_code(qapp):
@@ -355,12 +356,12 @@ def test_attach_console_attaches_to_the_parent_console_when_nothing_is_redirecte
 
 
 @win_only
-def test_attach_console_without_a_console_stays_silent(monkeypatch):
+def test_attach_console_without_a_console_stays_silent(monkeypatch, no_app_channel):
     no_streams(monkeypatch)
     kernel = FakeKernel32(console=False)
     light_app.attach_console(kernel)
     assert sys.stdout is None and sys.stderr is None
-    assert light_app.run_quick(["app", "--power", "x"], "unused") == qc.EXIT_USAGE  # çökmez; mesaj sessizce düşer
+    assert light_app.run_quick(["app", "--power", "x"], no_app_channel) == qc.EXIT_USAGE  # çökmez; mesaj sessizce düşer
 
 
 @win_only
@@ -376,11 +377,11 @@ def test_attach_console_survives_a_broken_console_api(monkeypatch):
 
 @win_only
 @pytest.mark.parametrize("merge", [False, True])
-def test_real_process_with_no_console_streams_writes_to_redirected_handles(merge):
+def test_real_process_with_no_console_streams_writes_to_redirected_handles(merge, no_app_channel):
     """Gerçek süreç, sys.stdout/stderr None (windowed exe gibi): yönlendirilen tutamaca yazar; `2>&1` de çalışır."""
     code = (
         "import sys; sys.stdout = sys.stderr = None; import light_app; "
-        "sys.exit(light_app.run_quick(['app', '--power', 'x'], 'unused'))"
+        f"sys.exit(light_app.run_quick(['app', '--power', 'x'], {no_app_channel!r}))"
     )
     env = {**os.environ, "QT_QPA_PLATFORM": "offscreen"}
     done = subprocess.run(
@@ -601,15 +602,12 @@ def test_wm_hotkey_messages_reach_the_manager_through_the_native_event_filter(qa
     manager.shutdown()
 
 
-@pytest.mark.skipif(sys.platform != "win32", reason="RegisterHotKey yalnızca Windows'ta")
-def test_real_register_hotkey_call_and_conflict_detection(qapp):
-    """Gerçek Win32 çağrısı: ctypes imzası doğru mu, aynı kombinasyonu ikinci kez almak çakışma döndürüyor mu."""
+def test_hotkey_conflict_detection_uses_the_fake_win32_backend(qapp):
+    """Çakışma yönetimi (conftest'teki sahte RegisterHotKey: gerçek Win32'ye ve kullanıcının kısayollarına dokunulmaz)."""
     first, second = HotkeyManager(available=True), HotkeyManager(available=True)
     combo = {"movie": "Ctrl+Alt+Shift+F12"}
     try:
-        errors = first.apply(combo)
-        if errors:
-            pytest.skip(f"kombinasyon bu makinede zaten kullanımda: {errors}")
+        assert first.apply(combo) == {}
         assert second.apply(combo) == {"movie": "conflict"}  # çakışma: başka bir kayıt aynı tuşu alamaz
         first.shutdown()
         assert second.apply(combo) == {}  # serbest kalınca alınabilir
